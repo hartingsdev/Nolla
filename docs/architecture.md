@@ -407,6 +407,17 @@ reconnect, surface 409s as conflicts. The design cost now is exactly two
 things — client-generated entry IDs and the `version` column — both present in
 v0.1.
 
+**Client side, as built (M6).** The store holds one `TripState` per trip: the
+ledger in wire form plus an *outbox* of pending writes. Local mutations apply
+immediately and, for shared trips, enqueue an op; `enqueue` folds ops on the
+same entry so the server sees one write per entry (edit-after-create stays a
+create, delete-after-create cancels both). One sync loop lives in the root
+layout: push the outbox in order, then pull the feed to the end; a network
+failure leaves everything queued, a 409 turns into a conflict notice with the
+server row winning, any other 4xx drops the op and surfaces the message. A
+pulled entry never overwrites one with a pending local write. The `local` trip
+never syncs and needs no account.
+
 ### 6.4 Concurrency
 
 Optimistic: every entry carries `version`; `PATCH`/`DELETE` require

@@ -9,7 +9,7 @@ const icon = (glyph: string) => ({ color }: { color: ColorValue }) => <Text styl
 export default function TabsLayout() {
   const t = useTheme();
   const { t: tr } = useTranslation();
-  const tripName = useStore((s) => s.trip.name);
+  const tripName = useStore((s) => s.trips[s.activeTripId]?.meta.name ?? '');
   return (
     <Tabs screenOptions={{
       headerStyle: { backgroundColor: t.card }, headerTintColor: t.text,

@@ -172,5 +172,56 @@
     "activity": "Activity",
     "transport": "Transport",
     "other": "Other"
+  },
+  "trips": {
+    "title": "Trips",
+    "local": "On this device only",
+    "shared": "Shared",
+    "create": "New shared trip",
+    "name": "Trip name",
+    "join": "Join with an invite link",
+    "joinPlaceholder": "Paste invite link",
+    "signInToShare": "Sign in to create or join shared trips.",
+    "empty": "No shared trips yet.",
+    "open": "Open"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "email": "E-mail address",
+    "sendLink": "Send sign-in link",
+    "sent": "Check your inbox — we sent a link to {{email}}. It is valid for 15 minutes.",
+    "verifying": "Signing you in…",
+    "failed": "That link is invalid or expired. Request a new one.",
+    "signedInAs": "Signed in as {{email}}",
+    "signOut": "Sign out",
+    "deleteAccount": "Delete account",
+    "deleteConfirm": "Delete your account? Your trips keep their entries; your name stays on them but your login is removed.",
+    "devFetchLink": "Dev: open the last link",
+    "apiUrl": "API URL",
+    "signInRequired": "Sign in to continue"
+  },
+  "invite": {
+    "title": "Join trip",
+    "accepting": "Joining…",
+    "whoAreYou": "Who are you in this trip?",
+    "newParticipant": "I'm new — add me as",
+    "namePlaceholder": "Your name",
+    "join": "Join",
+    "invalid": "This invite is invalid or expired.",
+    "create": "Create invite link",
+    "created": "Share this link with the others (valid 7 days):",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "sync": {
+    "pending_one": "{{count}} change waiting to sync",
+    "pending_other": "{{count}} changes waiting to sync",
+    "error": "Sync problem: {{message}}",
+    "synced": "Synced",
+    "never": "Not synced yet",
+    "conflict": "Someone else changed this entry; your edit was not applied.",
+    "conflictMine": "Your version:",
+    "dismiss": "Dismiss",
+    "now": "Sync now"
   }
 }

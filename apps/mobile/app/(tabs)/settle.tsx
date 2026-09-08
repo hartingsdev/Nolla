@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { type ParticipantId, type PlanOptions, type Transfer, entryToWire, grossMatrix, nearestMoney, toPrecise } from '@vst/domain';
 import { formatMoney, formatPrecise } from '../../src/format';
 import { todayLocal, uuidv7 } from '../../src/ids';
-import { useCcy, useEntries, useNames, usePlan, useWriteRules } from '../../src/selectors';
+import { useCcy, useEntries, useNames, useParticipants, usePlan, useWriteRules } from '../../src/selectors';
 import { useStore } from '../../src/store';
 import { space } from '../../src/theme';
 import { Amount, Body, Button, Card, Chip, Divider, H2, Row, Screen } from '../../src/components/ui';
@@ -14,7 +14,7 @@ type Kind = 'bilateral' | 'optimal' | 'hub';
 
 export default function Settle() {
   const { t, i18n } = useTranslation();
-  const participants = useStore((s) => s.participants);
+  const participants = useParticipants();
   const addEntry = useStore((s) => s.addEntry);
   const names = useNames();
   const rules = useWriteRules();

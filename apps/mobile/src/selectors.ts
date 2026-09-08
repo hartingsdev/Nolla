@@ -3,16 +3,30 @@ import {
   type Entry, type ParticipantId, type PlanOptions, balances, currency, entryFromWire, grossMatrix,
   roundAll, settle, tripCost, zeroMoney, type Money, type Precise,
 } from '@vst/domain';
-import { useStore } from './store';
+import { type TripState, useStore } from './store';
+
+export function useTrip(): TripState {
+  const t = useStore((s) => s.trips[s.activeTripId]);
+  if (!t) throw new Error('active trip missing');
+  return t;
+}
+export const useParticipants = () => useStore((s) => s.trips[s.activeTripId]?.participants ?? []);
+/** Explicit choice, else the participant claimed by the signed-in user (the creator, or after an invite). */
+export const useMeId = () => useStore((s) => {
+  const t = s.trips[s.activeTripId];
+  if (!t) return null;
+  return t.meId ?? t.participants.find((p) => s.auth !== null && p.userId === s.auth.userId)?.id ?? null;
+});
+export const useTripMeta = () => useStore((s) => s.trips[s.activeTripId]?.meta);
 
 export function useCcy() {
-  const code = useStore((s) => s.trip.ccy);
+  const code = useStore((s) => s.trips[s.activeTripId]?.meta.ccy ?? 'EUR');
   return useMemo(() => currency(code), [code]);
 }
 
 export function useEntries(): Entry[] {
-  const wire = useStore((s) => s.entries);
-  return useMemo(() => wire.map(entryFromWire), [wire]);
+  const wire = useStore((s) => s.trips[s.activeTripId]?.entries);
+  return useMemo(() => (wire ?? []).map(entryFromWire), [wire]);
 }
 
 export function useLiveEntries(): Entry[] {
@@ -24,7 +38,7 @@ export function useLiveEntries(): Entry[] {
 export function useBalances(): { exact: ReadonlyMap<ParticipantId, Precise>; shown: ReadonlyMap<ParticipantId, Money>; cost: Money } {
   const entries = useEntries();
   const ccy = useCcy();
-  const participants = useStore((s) => s.participants);
+  const participants = useParticipants();
   return useMemo(() => {
     const exact = balances(entries, ccy);
     const ids = participants.map((p) => p.id as ParticipantId);
@@ -46,20 +60,14 @@ export function usePlan(opts: PlanOptions | { kind: 'bilateral' }) {
 }
 
 export function useNames(): Map<string, string> {
-  const participants = useStore((s) => s.participants);
+  const participants = useParticipants();
   return useMemo(() => new Map(participants.map((p) => [p.id, p.name])), [participants]);
 }
 
 /** Which writes the trip's status admits right now (FR-8.7). */
 export function useWriteRules() {
-  const status = useStore((s) => s.trip.status);
-  return {
-    status,
-    canWriteExpense: status === 'open',
-    canWriteTransfer: status !== 'closed',
-    canEdit: status === 'open',
-    readOnly: status === 'closed',
-  };
+  const status = useStore((s) => s.trips[s.activeTripId]?.meta.status ?? 'open');
+  return { status, canWriteExpense: status === 'open', canWriteTransfer: status !== 'closed', canEdit: status === 'open', readOnly: status === 'closed' };
 }
 
 /** True when every rounded balance is zero — the precondition for closing (I5). */

@@ -172,5 +172,56 @@
     "activity": "Aktivität",
     "transport": "Transport",
     "other": "Sonstiges"
+  },
+  "trips": {
+    "title": "Reisen",
+    "local": "Nur auf diesem Gerät",
+    "shared": "Geteilt",
+    "create": "Neue geteilte Reise",
+    "name": "Reisename",
+    "join": "Mit Einladungslink beitreten",
+    "joinPlaceholder": "Einladungslink einfügen",
+    "signInToShare": "Melde dich an, um geteilte Reisen anzulegen oder beizutreten.",
+    "empty": "Noch keine geteilten Reisen.",
+    "open": "Öffnen"
+  },
+  "auth": {
+    "signIn": "Anmelden",
+    "email": "E-Mail-Adresse",
+    "sendLink": "Anmeldelink senden",
+    "sent": "Schau in dein Postfach — wir haben einen Link an {{email}} geschickt. Er gilt 15 Minuten.",
+    "verifying": "Du wirst angemeldet…",
+    "failed": "Der Link ist ungültig oder abgelaufen. Fordere einen neuen an.",
+    "signedInAs": "Angemeldet als {{email}}",
+    "signOut": "Abmelden",
+    "deleteAccount": "Konto löschen",
+    "deleteConfirm": "Konto löschen? Deine Reisen behalten ihre Einträge; dein Name bleibt dort, dein Login wird entfernt.",
+    "devFetchLink": "Dev: letzten Link öffnen",
+    "apiUrl": "API-URL",
+    "signInRequired": "Zum Fortfahren anmelden"
+  },
+  "invite": {
+    "title": "Reise beitreten",
+    "accepting": "Beitreten…",
+    "whoAreYou": "Wer bist du in dieser Reise?",
+    "newParticipant": "Ich bin neu — füge mich hinzu als",
+    "namePlaceholder": "Dein Name",
+    "join": "Beitreten",
+    "invalid": "Diese Einladung ist ungültig oder abgelaufen.",
+    "create": "Einladungslink erstellen",
+    "created": "Teile diesen Link mit den anderen (7 Tage gültig):",
+    "copy": "Kopieren",
+    "copied": "Kopiert"
+  },
+  "sync": {
+    "pending_one": "{{count}} Änderung wartet auf Sync",
+    "pending_other": "{{count}} Änderungen warten auf Sync",
+    "error": "Sync-Problem: {{message}}",
+    "synced": "Synchronisiert",
+    "never": "Noch nicht synchronisiert",
+    "conflict": "Jemand anderes hat diesen Eintrag geändert; deine Änderung wurde verworfen.",
+    "conflictMine": "Deine Version:",
+    "dismiss": "Ausblenden",
+    "now": "Jetzt synchronisieren"
   }
 }

@@ -6,7 +6,7 @@ import { categoryIcon } from '../../../src/categories';
 import { formatDate, formatMoney, formatPrecise } from '../../../src/format';
 import { todayLocal, uuidv7 } from '../../../src/ids';
 import { useDismiss } from '../../../src/nav';
-import { useEntries, useNames, useWriteRules } from '../../../src/selectors';
+import { useEntries, useMeId, useNames, useWriteRules } from '../../../src/selectors';
 import { useStore } from '../../../src/store';
 import { useTheme } from '../../../src/theme';
 import { Amount, Body, Button, Card, Chip, Divider, H1, H2, Row, Screen } from '../../../src/components/ui';
@@ -19,7 +19,7 @@ export default function EntryDetail() {
   const dismiss = useDismiss();
   const entries = useEntries();
   const names = useNames();
-  const meId = useStore((s) => s.meId);
+  const meId = useMeId();
   const deleteEntry = useStore((s) => s.deleteEntry);
   const restoreEntry = useStore((s) => s.restoreEntry);
   const addEntry = useStore((s) => s.addEntry);

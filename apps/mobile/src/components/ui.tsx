@@ -28,9 +28,9 @@ export function H2({ children }: { children: ReactNode }) {
   const t = useTheme();
   return <Text style={{ fontSize: 13, fontWeight: '600', color: t.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>{children}</Text>;
 }
-export function Body({ children, muted, style, numberOfLines }: { children: ReactNode; muted?: boolean; style?: TextStyle; numberOfLines?: number }) {
+export function Body({ children, muted, style, numberOfLines, selectable }: { children: ReactNode; muted?: boolean; style?: TextStyle; numberOfLines?: number; selectable?: boolean }) {
   const t = useTheme();
-  return <Text numberOfLines={numberOfLines} style={[{ fontSize: 16, color: muted ? t.muted : t.text }, style]}>{children}</Text>;
+  return <Text numberOfLines={numberOfLines} selectable={selectable} style={[{ fontSize: 16, color: muted ? t.muted : t.text }, style]}>{children}</Text>;
 }
 export function Amount({ children, tone = 'neutral', size = 16 }: { children: ReactNode; tone?: 'positive' | 'negative' | 'neutral'; size?: number }) {
   const t = useTheme();

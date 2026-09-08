@@ -1,8 +1,8 @@
 import { type ParticipantId, type WireEntry, allocate, currency, entryToWire, localDate, money, moneyFromString } from '@vst/domain';
-import { type Participant, type TripMeta } from './store';
+import { type Participant } from './store';
 
 /** The first rows of the group's real spreadsheet, so screens have something to show. */
-export function sampleTrip(): { trip: TripMeta; participants: Participant[]; entries: WireEntry[] } {
+export function sampleTrip(): { trip: { name: string; ccy: string }; participants: Participant[]; entries: WireEntry[] } {
   const EUR = currency('EUR');
   const P = ['Yannik', 'Max', 'Robert', 'Tobias', 'Marc'].map((name, i) => ({ id: `p${String(i)}`, name }));
   const id = (name: string) => (P.find((p) => p.name === name)?.id ?? 'p0') as ParticipantId;
@@ -36,5 +36,5 @@ export function sampleTrip(): { trip: TripMeta; participants: Participant[]; ent
     shares: allocate(s, { kind: 'exact', amounts: { [id('Yannik')]: money(1175n, EUR), [id('Max')]: money(750n, EUR), [id('Tobias')]: money(1975n, EUR) } }, { seed: 'sample-x' }),
     createdAt: '2026-03-03T20:00:00Z',
   }));
-  return { trip: { id: 'sample', name: 'Elsass 2026', ccy: 'EUR', timezone: 'Europe/Berlin', status: 'open' }, participants: P, entries };
+  return { trip: { name: 'Elsass 2026', ccy: 'EUR' }, participants: P, entries };
 }

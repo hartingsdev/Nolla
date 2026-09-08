@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "serve:dist": "node scripts/serve-dist.mjs dist 8787",
-    "e2e": "pnpm export:web && playwright test",
+    "e2e": "EXPO_PUBLIC_API_URL=http://localhost:8090 expo export --platform web && playwright test",
     "e2e:only": "playwright test"
   },
   "dependencies": {

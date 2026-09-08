@@ -6,8 +6,7 @@ import {
 } from '@vst/domain';
 import { formatMoney, normalizeAmountInput } from '../format';
 import { todayLocal, uuidv7 } from '../ids';
-import { useCcy } from '../selectors';
-import { useStore } from '../store';
+import { useCcy, useMeId, useParticipants } from '../selectors';
 import { space, useTheme } from '../theme';
 import { Body, Button, Card, Chip, H2, Row, Screen } from './ui';
 import { CATEGORIES, CATEGORY_ICON } from '../categories';
@@ -31,8 +30,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const { t, i18n } = useTranslation();
   const th = useTheme();
   const ccy = useCcy();
-  const participants = useStore((s) => s.participants);
-  const meId = useStore((s) => s.meId);
+  const participants = useParticipants();
+  const meId = useMeId();
   const locale = i18n.language;
   const plain = plainFor(locale);
 

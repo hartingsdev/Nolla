@@ -37,10 +37,11 @@ pnpm install            # Node 22, pnpm 10 (see .nvmrc / packageManager)
 pnpm check              # lint + typecheck + test, what CI runs
 pnpm --filter @vst/domain test:watch
 pnpm --filter @vst/mobile web         # the app in a browser (Expo web)
-pnpm --filter @vst/mobile e2e         # UI click tests: exports the web build, serves it, runs Playwright
+pnpm --filter @vst/mobile e2e         # UI click tests: exports the web build (API URL :8090 baked in), boots the PGlite API, runs Playwright
 pnpm --filter @vst/persistence test   # ledger schema tests on PGlite (in-process Postgres); set DATABASE_URL to use a real one
 pnpm --filter @vst/persistence migrate           # apply migrations/*.sql to DATABASE_URL
 pnpm --filter @vst/persistence check-invariants  # the nightly correctness job; exit 1 on any violation
+pnpm --filter @vst/api dev:pglite                # the API on :8080 with an in-process Postgres — no Docker, no DATABASE_URL
 pnpm --filter @vst/api dev                       # the API on :8080 (+ metrics on :9464) via tsx, needs DATABASE_URL
 pnpm --filter @vst/api build                     # esbuild → apps/api/dist/main.mjs, what the Dockerfile ships
 pnpm --filter @vst/api test                      # HTTP tests through app.request() on PGlite
@@ -69,4 +70,5 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] M3 — Postgres schema with invariant triggers, Drizzle repositories, invariant job, tests on PGlite + real Postgres
 - [x] M4 — identity: OIDC verification (Apple/Google), magic links, sessions, deletion
 - [x] M5 — Hono API: trips, invites, participants, ledger + change feed, balances, settlement, lifecycle, metrics
-- [ ] M6–M11 — client, distribution, the trip
+- [x] M6 — shared trips in the app: sign-in (magic link), invites, claiming, sync engine with outbox + change feed, conflict notices
+- [ ] M7–M11 — offline write polish, receipts, distribution (TestFlight / internal testing), the trip

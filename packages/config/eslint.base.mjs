@@ -52,6 +52,7 @@ export const base = tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/require-await': 'off', // fakes are async by interface, not by need
     },
   },
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.config.*'] },

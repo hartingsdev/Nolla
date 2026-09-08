@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { type Clock } from '@vst/domain';
 import { type Db } from '@vst/persistence';
 import { type RateLimiter } from './identity/rate-limit.ts';
@@ -21,12 +22,15 @@ export interface AppDeps {
   readonly limiter: RateLimiter;
   readonly metrics: Metrics;
   readonly appBaseUrl: string;
+  /** Browser origins allowed to call the API (the web build). Native apps have no origin. */
+  readonly corsOrigins?: readonly string[];
   readonly signInDeps: () => SignInDeps;
 }
 
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   app.use('*', requestId());
+  app.use('*', cors({ origin: [...(deps.corsOrigins ?? [])], allowHeaders: ['authorization', 'content-type', 'if-match', 'x-app-version', 'x-platform', 'x-request-id'], exposeHeaders: ['x-request-id'], maxAge: 600 }));
   app.use('*', metricsMiddleware(deps.metrics));
   app.onError(onError(deps.metrics));
   app.get('/health', (c) => c.json({ ok: true }));

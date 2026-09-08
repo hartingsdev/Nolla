@@ -5,12 +5,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 import i18n from '../src/i18n';
 import { useStore } from '../src/store';
+import { useSync } from '../src/sync/useSync';
 import { useTheme } from '../src/theme';
 
 export default function RootLayout() {
   const t = useTheme();
   const { t: tr } = useTranslation();
   const locale = useStore((s) => s.locale);
+  useSync();
   useEffect(() => { if (locale && i18n.language !== locale) void i18n.changeLanguage(locale); }, [locale]);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -23,6 +25,10 @@ export default function RootLayout() {
         <Stack.Screen name="person/[id]" options={{ title: '' }} />
         <Stack.Screen name="participants" options={{ title: tr('participants.title') }} />
         <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
+        <Stack.Screen name="trips" options={{ title: tr('trips.title') }} />
+        <Stack.Screen name="signin" options={{ title: tr('auth.signIn') }} />
+        <Stack.Screen name="auth/email" options={{ title: tr('auth.signIn') }} />
+        <Stack.Screen name="i/[token]" options={{ title: tr('invite.title') }} />
       </Stack>
     </GestureHandlerRootView>
   );

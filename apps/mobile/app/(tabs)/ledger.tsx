@@ -4,8 +4,7 @@ import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { categoryIcon } from '../../src/categories';
 import { formatDate, formatMoney } from '../../src/format';
-import { useEntries, useLiveEntries, useNames } from '../../src/selectors';
-import { useStore } from '../../src/store';
+import { useEntries, useLiveEntries, useNames, useParticipants } from '../../src/selectors';
 import { space, useTheme } from '../../src/theme';
 import { Amount, Body, Card, Chip, Row, Screen } from '../../src/components/ui';
 
@@ -17,7 +16,7 @@ export default function Ledger() {
   const router = useRouter();
   const live = useLiveEntries();
   const all = useEntries();
-  const participants = useStore((s) => s.participants);
+  const participants = useParticipants();
   const [showDeleted, setShowDeleted] = useState(false);
   const [query, setQuery] = useState('');
   const [type, setType] = useState<TypeFilter>('all');

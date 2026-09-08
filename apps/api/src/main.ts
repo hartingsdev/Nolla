@@ -33,9 +33,10 @@ const smtp = process.env.SMTP_URL;
 const notifier = smtp ? smtpNotifier(smtp, env('MAIL_FROM', 'Trip Ledger <no-reply@example.com>')) : new RecordingNotifier();
 const limiter = new MemoryRateLimiter(10, 60_000);
 const appBaseUrl = env('APP_BASE_URL', 'http://localhost:8081');
+const corsOrigins = list(env('CORS_ORIGINS', appBaseUrl));
 
 const deps = {
-  db: conn.db, sessions, verifier, notifier, clock, limiter, metrics, appBaseUrl,
+  db: conn.db, sessions, verifier, notifier, clock, limiter, metrics, appBaseUrl, corsOrigins,
   signInDeps: () => ({
     db: conn.db, verifier, sessions, notifier, clock, limiter, appBaseUrl,
     t: (k: 'magicLink.subject' | 'magicLink.body', v: { url: string }) => (k === 'magicLink.subject' ? 'Your Trip Ledger sign-in link' : `Open this link to sign in (valid 15 minutes):\n\n${v.url}`),

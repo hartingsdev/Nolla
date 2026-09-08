@@ -80,6 +80,7 @@ jobs:
       - run: pnpm --filter @vst/mobile export:web
         env:
           CI: 1
+          EXPO_PUBLIC_API_URL: http://localhost:8090   # the e2e suite boots the API on PGlite on this port
       - run: pnpm --filter @vst/mobile exec playwright install --with-deps chromium
       - run: pnpm --filter @vst/mobile e2e:only
         env:

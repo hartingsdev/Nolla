@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { type ParticipantId, M, zeroMoney } from '@vst/domain';
 import { categoryIcon } from '../../src/categories';
 import { formatDate, formatMoney } from '../../src/format';
-import { useBalances, useCcy, useLiveEntries, useNames, useWriteRules } from '../../src/selectors';
+import { useBalances, useCcy, useLiveEntries, useMeId, useNames, useParticipants, useTrip, useWriteRules } from '../../src/selectors';
+import { requestSync, useSyncing } from '../../src/sync/useSync';
 import { useStore } from '../../src/store';
 import { space, useTheme } from '../../src/theme';
 import { Amount, Body, Card, Chip, Divider, H1, H2, Row, Screen } from '../../src/components/ui';
@@ -14,9 +15,12 @@ export default function Overview() {
   const th = useTheme();
   const router = useRouter();
   const ccy = useCcy();
-  const participants = useStore((s) => s.participants);
-  const meId = useStore((s) => s.meId);
+  const participants = useParticipants();
+  const meId = useMeId();
   const setMe = useStore((s) => s.setMe);
+  const trip = useTrip();
+  const syncing = useSyncing();
+  const dismissConflict = useStore((s) => s.dismissConflict);
   const hydrated = useStore((s) => s.hydrated);
   const { shown, cost } = useBalances();
   const rules = useWriteRules();
@@ -34,6 +38,25 @@ export default function Overview() {
 
   return (
     <Screen>
+      {trip.meta.remote && (
+        <Card style={{ paddingVertical: space.sm }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Body muted style={{ fontSize: 13, flex: 1 }}>
+              {trip.syncError ? t('sync.error', { message: trip.syncError })
+                : trip.outbox.length > 0 ? t('sync.pending', { count: trip.outbox.length })
+                : trip.lastSyncAt ? t('sync.synced') : t('sync.never')}
+            </Body>
+            <Pressable onPress={() => { void requestSync(); }} disabled={syncing} accessibilityRole="button"><Body style={{ color: th.primary, fontSize: 13 }}>{t('sync.now')}</Body></Pressable>
+          </Row>
+        </Card>
+      )}
+      {Object.entries(trip.conflicts).map(([id, mine]) => (
+        <Card key={id}>
+          <Body style={{ color: th.negative }}>{t('sync.conflict')}</Body>
+          <Body muted style={{ fontSize: 13 }}>{t('sync.conflictMine')} {mine.description} · {mine.amount} {mine.ccy}</Body>
+          <Row><Chip label={t('sync.dismiss')} selected={false} onPress={() => { dismissConflict(id); }} /></Row>
+        </Card>
+      ))}
       {rules.status !== 'open' && (
         <Card>
           <H2>{t(`trip.status.${rules.status}`)}</H2>
@@ -85,6 +108,7 @@ export default function Overview() {
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
           <H2>{t('overview.recent')}</H2>
+          <Link href="/trips" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('trips.title')}</Body></Pressable></Link>
           <Link href="/settings" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('settings.title')}</Body></Pressable></Link>
         </Row>
         {entries.length === 0 ? <Body muted>{t('ledger.empty')}</Body> : entries.slice(0, 5).map((e, i) => (
