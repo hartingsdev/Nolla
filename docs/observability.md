@@ -29,7 +29,7 @@ client is observable through the server.
 ┌─────────────── apps/api container ───────────────┐
 │  Hono/Fastify  ──▶  metrics middleware (RED)      │
 │  use-cases     ──▶  business counters             │
-│  invariant job ──▶  gauges (last run, violations) │──▶ GET /metrics (prom-client, bearer-protected)
+│  invariant job ──▶  gauges (last run, violations) │──▶ GET /metrics (bearer-protected)
 └──────────────────────────────────────────────────┘
                      ▲ scrape 15s
         ┌────────────┴────────────┐
@@ -43,7 +43,8 @@ client is observable through the server.
         └─────────────────────────┘        └──────────────────────┘
 ```
 
-Portability (D3) holds: `prom-client` is the only dependency and it lives in
+Portability (D3) holds: `@prometheus-io/client` (the official rename of
+`prom-client`) is the only dependency and it lives in
 `apps/api/src/adapters/metrics.ts` behind a tiny `Metrics` port
 (`counter`, `histogram`, `gauge`). The domain package never sees it. Any host
 that can run three containers — or a managed Prometheus (Grafana Cloud,
@@ -155,7 +156,7 @@ digest.
   add-on in `docker-compose.observability.yml`; not required for v0.1.
 - Tracing: not in v0.1. If the sync path ever needs it, OpenTelemetry's Node
   SDK exports to Tempo; the `Metrics` port is designed so an OTel meter can
-  replace `prom-client` without touching call sites.
+  replace the Prometheus client without touching call sites.
 - Error tracking (Sentry or similar) stays behind the `ErrorReporter` port
   (architecture.md §8) and is complementary, not a replacement.
 
@@ -181,7 +182,7 @@ so the repo stays the source of truth.
 
 ## 9. Implementation checklist for M5
 
-- [ ] `Metrics` port + `prom-client` adapter; registry exposed on :9464 with bearer check
+- [x] `Metrics` port + `@prometheus-io/client` adapter; registry exposed on :9464 with bearer check
 - [ ] RED middleware with route-pattern labels and client version labels
 - [ ] Counters in use-cases: entry writes, validation failures, settlement plans, conflicts
 - [ ] Invariant job sets gauges and exits non-zero on violation (so a cron alert exists even without Prometheus)

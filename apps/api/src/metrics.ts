@@ -1,8 +1,8 @@
 /**
- * Metrics port + prom-client adapter (observability.md §3). Only this file
- * imports prom-client; call sites use the small `Metrics` interface.
+ * Metrics port + Prometheus client adapter (observability.md §3). Only this file
+ * imports the client library; call sites use the small `Metrics` interface.
  */
-import client from 'prom-client';
+import client from '@prometheus-io/client';
 
 export interface Metrics {
   readonly http: { observe(route: string, method: string, status: number, seconds: number, client: { appVersion: string; platform: string }): void; inFlight(delta: 1 | -1): void };

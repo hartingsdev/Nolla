@@ -1,0 +1,64 @@
+# Dependabot for a pnpm workspace.
+#
+# Until now there was no config, so only *security* updates ran: each one opened a
+# separate job, and the esbuild one failed repeatedly because the only resolvable
+# version was pinned by a transitive dependency. Scheduled version updates keep the
+# tree current so security updates stay resolvable, and grouping keeps the noise down.
+version: 2
+updates:
+  - package-ecosystem: npm
+    # pnpm workspaces: the root manifest plus every workspace package.
+    directories:
+      - /
+      - /apps/api
+      - /apps/mobile
+      - /packages/*
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per concern rather than one per package.
+      dev-tooling:
+        patterns: ["eslint*", "@eslint/*", "typescript-eslint", "vitest", "@vitest/*", "fast-check", "tsx", "esbuild", "@playwright/test"]
+      types:
+        patterns: ["@types/*"]
+      backend:
+        patterns: ["hono", "@hono/*", "drizzle-orm", "pg", "jose", "nodemailer", "@prometheus-io/*", "@aws-sdk/*", "zod"]
+      expo:
+        patterns: ["expo", "expo-*", "@expo/*", "react-native*", "react", "react-dom"]
+        update-types: [minor, patch]
+    ignore:
+      # Expo SDK pins these native module versions in bundledNativeModules.json.
+      # A newer major installs cleanly and then crashes on device, so the SDK upgrade
+      # has to drive them, not Dependabot.
+      - dependency-name: "@react-native-async-storage/async-storage"
+        update-types: [version-update:semver-major]
+      - dependency-name: "react-native-gesture-handler"
+        update-types: [version-update:semver-major]
+      - dependency-name: "react-native"
+        update-types: [version-update:semver-major]
+      - dependency-name: "react"
+        update-types: [version-update:semver-major]
+      - dependency-name: "react-dom"
+        update-types: [version-update:semver-major]
+      # typescript-eslint's peer range is >=4.8.4 <6.1.0, so TypeScript 7 breaks linting.
+      # Remove this once typescript-eslint supports it.
+      - dependency-name: "typescript"
+        update-types: [version-update:semver-major]
+      # @types/node tracks the Node runtime in .nvmrc and the Dockerfile, not npm's latest.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

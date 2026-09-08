@@ -9,7 +9,7 @@
     "test:watch": "vitest",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.mjs",
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/main.mjs --external:pg-native --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/main.mjs --external:pg-native --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
     "dev:pglite": "tsx scripts/dev-pglite.ts",
     "retention": "tsx scripts/retention.ts"
   },
@@ -18,19 +18,19 @@
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
     "@hono/node-server": "^2.1.1",
     "@hono/zod-validator": "^0.9.1",
+    "@prometheus-io/client": "^0.16.1",
     "@vst/contracts": "workspace:*",
     "@vst/domain": "workspace:*",
     "@vst/persistence": "workspace:*",
     "hono": "^4.13.7",
     "jose": "^6.2.12",
     "nodemailer": "^10.0.1",
-    "prom-client": "^15.1.3",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
     "vitest": "^5.0.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.20.0",
     "@electric-sql/pglite": "^0.5.8"
   }
