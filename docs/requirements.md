@@ -1,9 +1,11 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.3** · Owner: project team · Date: 2026-09-08
+Status: **Draft v1.4** · Owner: project team · Date: 2026-09-08
 
 **Changelog**
 
+- v1.4 — exact settlement search raised to n ≤ 16 with the O(2ⁿ·n) DP
+  documented in [architecture.md](architecture.md) §4.4.
 - v1.3 — review pass: explicit `Participant` entity (placeholders, claiming,
   tombstoning); adjustments made two-sided so Σ balances == 0 holds; settlement
   spec corrected (greedy is not always minimal — exact search for small n);
@@ -499,13 +501,15 @@ This is documentation of the algorithm, not a test fixture (D7).
 non-zero balances can be partitioned into; finding *k* is NP-hard in general.
 Two implementations, selected by group size:
 
-- *n ≤ 12:* **exact** — subset-sum dynamic programming over the 2ⁿ balance
-  subsets (≈ 3ⁿ ≈ 5·10⁵ steps at n = 12, trivial), then greedy inside each
-  zero-sum subset. Guaranteed minimal.
-- *n > 12:* **greedy** max-debtor ↔ max-creditor matching, at most *n − 1*
+- *n ≤ 16:* **exact** — for each subset mask of the non-zero balances,
+  `dp[mask] = max over i∈mask of dp[mask∖i] + [sum(mask) = 0]`; the largest
+  number of disjoint zero-sum groups is `dp[full]`, and greedy inside each
+  group yields exactly `|group| − 1` transfers. O(2ⁿ·n) ≈ 10⁶ steps at n = 16,
+  milliseconds. Guaranteed minimal; verified against brute force.
+- *n > 16:* **greedy** max-debtor ↔ max-creditor matching, at most *n − 1*
   transfers. Not always minimal: balances `[+2, +3, −4, −5, +4]` take 4
   transfers under greedy but 3 optimally (`{+4, −4}` and `{+2, +3, −5}`). Good
-  enough where exact search would be slow, and n > 12 is rare for this product.
+  enough where exact search would be slow, and n > 16 is rare for this product.
 
 Ties are broken by stable participant order so the plan is identical on
 recomputation.

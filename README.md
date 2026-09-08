@@ -12,6 +12,8 @@ Requirements phase. No code yet.
 - [Requirements & feature plan](docs/requirements.md) — scope, decision log, domain model,
   functional/non-functional requirements, settlement algorithm, release plan,
   open questions.
+- [Architecture plan](docs/architecture.md) — package boundaries, money types,
+  schema, API, identity flows, client design, ADRs, and the v0.1 build order.
 
 ## Decisions so far
 
@@ -24,5 +26,6 @@ billing deferred. Full rationale in §1.3 of the requirements.
 
 ## Next step
 
-Settle Q10 (how v0.1 reaches the group) and write the architecture plan for the
-MVP slice defined in §11.
+Start milestone M0 of the architecture plan (monorepo scaffold with the import
+boundary rules), then M1 (money types and split allocation with property
+tests). Q10 (how v0.1 reaches the group) must be settled before M10.
