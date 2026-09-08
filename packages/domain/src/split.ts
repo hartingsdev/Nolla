@@ -7,11 +7,11 @@
  * a human in Money and are rejected unless they already sum to the total.
  */
 
-import { DomainError } from './errors.js';
+import { DomainError } from './errors';
 import {
   type Currency, type Money, type Precise,
   M, P, floorDiv, floorMod, money, precise, seedIndex, toPrecise, zeroMoney,
-} from './money.js';
+} from './money';
 
 export type ParticipantId = string & { readonly __brand: 'ParticipantId' };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { check, effectiveRetentionDays, resolveLimits } from './index.js';
+import { check, effectiveRetentionDays, resolveLimits } from './index';
 
 describe('entitlements (FR-12, D13)', () => {
   it('the v0.1 plan permits everything', () => {

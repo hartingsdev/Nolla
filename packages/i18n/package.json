@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "typecheck": "echo 'not yet'", "test": "echo 'not yet'" }
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "dependencies": { "i18next": "^26.4.2" },
+  "devDependencies": { "vitest": "^5.0.0" }
 }

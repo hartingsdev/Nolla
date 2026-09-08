@@ -3,8 +3,8 @@ import fc from 'fast-check';
 import {
   type Balances, type ParticipantId, type Plan, M, P, EXACT_LIMIT, applyPlan, balances, currency, greedy,
   grossMatrix, money, precise, settle, toPrecise, zeroSumGroups,
-} from './index.js';
-import { arbLedger, arbZeroSumVector } from './testing/gen.js';
+} from './index';
+import { arbLedger, arbZeroSumVector } from './testing/gen';
 
 const EUR = currency('EUR');
 const pid = (s: string) => s as ParticipantId;

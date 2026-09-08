@@ -36,6 +36,8 @@ tests). Q10 (how v0.1 reaches the group) must be settled before M10.
 pnpm install            # Node 22, pnpm 10 (see .nvmrc / packageManager)
 pnpm check              # lint + typecheck + test, what CI runs
 pnpm --filter @vst/domain test:watch
+pnpm --filter @vst/mobile web         # the app in a browser (Expo web)
+pnpm --filter @vst/mobile start       # Expo dev server for iOS/Android (Expo Go or a dev build)
 docker compose up -d    # postgres, minio, mailpit for local API work (from M3 on)
 ```
 
@@ -48,6 +50,7 @@ clock or float conversion) is enforced by ESLint and fails the build.
 - [x] M0 — scaffold, boundary rules, CI, local services
 - [x] M1 — money types, `roundAll` boundary, split allocation, property tests
 - [x] M2 — ledger, balances, gross matrix, three settlement plans, lifecycle, entitlements
+- [x] UI (pulled forward) — Expo app shell: overview, ledger, settle up, add expense, entry detail, participants, settings; local-only store; EN + DE
 - [ ] M3 — schema + persistence (Drizzle)
 - [ ] M4 — identity
 - [ ] M5 — API (framework: to be decided — Hono or Fastify)

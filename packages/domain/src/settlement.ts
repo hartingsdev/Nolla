@@ -7,10 +7,10 @@
  * reported for the UI, and then one of three matchers runs.
  */
 
-import { DomainError } from './errors.js';
-import { type Currency, type Money, type Precise, M, P, money, precise, roundAll, toPrecise, zeroMoney } from './money.js';
-import { type ParticipantId } from './split.js';
-import { type Balances, type GrossMatrix } from './ledger.js';
+import { DomainError } from './errors';
+import { type Currency, type Money, type Precise, M, P, money, precise, roundAll, toPrecise, zeroMoney } from './money';
+import { type ParticipantId } from './split';
+import { type Balances, type GrossMatrix } from './ledger';
 
 export interface Transfer {
   readonly from: ParticipantId;

@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import {
   DomainError, M, P, currency, money, moneyFromString, moneyToString, precise,
   preciseFromString, preciseToString, roundAll, toPrecise, PRECISE_SCALE, floorDiv, floorMod,
-} from './index.js';
+} from './index';
 
 const EUR = currency('EUR');
 const JPY = currency('JPY');

@@ -3,8 +3,8 @@ import fc from 'fast-check';
 import {
   type LedgerEntry, type ParticipantId, DomainError, M, P, allocate, balances, currency, grossMatrix,
   localDate, money, participantTotals, precise, tripCost, validateEntry, zeroPrecise,
-} from './index.js';
-import { arbLedger } from './testing/gen.js';
+} from './index';
+import { arbLedger } from './testing/gen';
 
 const EUR = currency('EUR');
 const pid = (s: string) => s as ParticipantId;

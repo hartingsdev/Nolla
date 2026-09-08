@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import {
   type ParticipantId, type SplitRule, BPS_TOTAL, DomainError, M, P, allocate, currency,
   exactResidual, money, precise, preciseToString, roundAll, toPrecise,
-} from './index.js';
+} from './index';
 
 const EUR = currency('EUR');
 const JPY = currency('JPY');

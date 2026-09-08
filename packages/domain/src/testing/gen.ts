@@ -1,8 +1,8 @@
 import fc from 'fast-check';
-import { type Currency, money } from '../money.js';
-import { type LedgerEntry, type Payment } from '../ledger.js';
-import { type ParticipantId, type SplitRule, allocate, BPS_TOTAL } from '../split.js';
-import { localDate } from '../ports.js';
+import { type Currency, money } from '../money';
+import { type LedgerEntry, type Payment } from '../ledger';
+import { type ParticipantId, type SplitRule, allocate, BPS_TOTAL } from '../split';
+import { localDate } from '../ports';
 
 const pid = (s: string) => s as ParticipantId;
 

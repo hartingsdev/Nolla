@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allows, transition } from './index.js';
+import { allows, transition } from './index';
 
 const admin = { isAdmin: true, allBalancesZero: false };
 describe('trip lifecycle (FR-8.7, I5)', () => {

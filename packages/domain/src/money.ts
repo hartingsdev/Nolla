@@ -13,7 +13,7 @@
  * is deliberately no single-value `round(precise)`.
  */
 
-import { DomainError } from './errors.js';
+import { DomainError } from './errors';
 
 // ---------------------------------------------------------------------------
 // Currency

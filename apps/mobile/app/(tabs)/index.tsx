@@ -1,0 +1,106 @@
+import { Link, useRouter } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { type ParticipantId, M, zeroMoney } from '@vst/domain';
+import { formatDate, formatMoney } from '../../src/format';
+import { useBalances, useCcy, useLiveEntries, useNames } from '../../src/selectors';
+import { useStore } from '../../src/store';
+import { space, useTheme } from '../../src/theme';
+import { Amount, Body, Card, Chip, Divider, H1, H2, Row, Screen } from '../../src/components/ui';
+
+export default function Overview() {
+  const { t, i18n } = useTranslation();
+  const th = useTheme();
+  const router = useRouter();
+  const ccy = useCcy();
+  const participants = useStore((s) => s.participants);
+  const meId = useStore((s) => s.meId);
+  const setMe = useStore((s) => s.setMe);
+  const hydrated = useStore((s) => s.hydrated);
+  const { shown, cost } = useBalances();
+  const entries = useLiveEntries();
+  const names = useNames();
+  const locale = i18n.language;
+
+  if (!hydrated) return <Screen scroll={false}><View /></Screen>;
+
+  const mine = meId ? shown.get(meId as ParticipantId) ?? zeroMoney(ccy) : null;
+  const headline = mine === null ? null
+    : M.isZero(mine) ? t('overview.settled')
+    : mine.minor < 0n ? t('overview.youOwe', { amount: formatMoney(M.abs(mine), locale) })
+    : t('overview.youGetBack', { amount: formatMoney(mine, locale) });
+
+  return (
+    <Screen>
+      <Card>
+        {participants.length === 0 ? (
+          <Body muted>{t('overview.empty')}</Body>
+        ) : mine === null ? (
+          <>
+            <H2>{t('overview.whoAreYou')}</H2>
+            <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={false} onPress={() => { setMe(p.id); }} />)}</Row>
+          </>
+        ) : (
+          <>
+            <H1 style={{ color: mine.minor < 0n ? th.negative : mine.minor > 0n ? th.positive : th.text }}>{headline}</H1>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <Body muted>{t('overview.tripCost')}</Body>
+              <Amount>{formatMoney(cost, locale)}</Amount>
+            </Row>
+          </>
+        )}
+      </Card>
+
+      {participants.length > 0 && (
+        <Card>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <H2>{t('overview.balances')}</H2>
+            <Link href="/participants" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('participants.title')}</Body></Pressable></Link>
+          </Row>
+          {participants.map((p, i) => {
+            const b = shown.get(p.id as ParticipantId) ?? zeroMoney(ccy);
+            const tone = b.minor < 0n ? 'negative' : b.minor > 0n ? 'positive' : 'neutral';
+            const label = M.isZero(b) ? t('person.settled') : b.minor < 0n ? t('person.owes', { amount: formatMoney(M.abs(b), locale) }) : t('person.getsBack', { amount: formatMoney(b, locale) });
+            return (
+              <View key={p.id}>
+                {i > 0 && <Divider />}
+                <Row style={{ justifyContent: 'space-between' }}>
+                  <Body>{p.name}{p.id === meId ? ` (${t('participants.you')})` : ''}</Body>
+                  <Amount tone={tone}>{label}</Amount>
+                </Row>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      <Card>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <H2>{t('overview.recent')}</H2>
+          <Link href="/settings" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('settings.title')}</Body></Pressable></Link>
+        </Row>
+        {entries.length === 0 ? <Body muted>{t('ledger.empty')}</Body> : entries.slice(0, 5).map((e, i) => (
+          <Pressable key={e.id} onPress={() => { router.push({ pathname: '/entry/[id]', params: { id: e.id } }); }}>
+            {i > 0 && <Divider />}
+            <Row style={{ justifyContent: 'space-between' }}>
+              <View style={{ flex: 1 }}>
+                <Body numberOfLines={1}>{e.description}</Body>
+                <Body muted style={{ fontSize: 13 }}>
+                  {formatDate(e.date, locale)} · {e.type === 'transfer'
+                    ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })
+                    : t('ledger.paidBy', { name: e.payments.map((p) => names.get(p.participantId) ?? '?').join(', ') })}
+                </Body>
+              </View>
+              <Amount tone={e.amount.minor < 0n ? 'positive' : 'neutral'}>{formatMoney(e.amount, locale)}</Amount>
+            </Row>
+          </Pressable>
+        ))}
+      </Card>
+
+      <Pressable onPress={() => { router.push('/entry/new'); }} accessibilityRole="button" accessibilityLabel={t('overview.add')}
+        style={({ pressed }) => ({ position: 'absolute', right: space.lg, bottom: space.lg, width: 60, height: 60, borderRadius: 30, backgroundColor: th.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1, elevation: 4 })}>
+        <Text style={{ color: th.onPrimary, fontSize: 32, lineHeight: 36 }}>{'+'}</Text>
+      </Pressable>
+    </Screen>
+  );
+}

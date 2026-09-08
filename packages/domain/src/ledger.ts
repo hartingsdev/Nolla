@@ -7,10 +7,10 @@
  * (Σ balances == 0) follows from I1.
  */
 
-import { DomainError } from './errors.js';
-import { type Currency, type Money, type Precise, M, P, floorDiv, precise, toPrecise, zeroMoney, zeroPrecise } from './money.js';
-import { type ParticipantId, type Share } from './split.js';
-import { type LocalDate } from './ports.js';
+import { DomainError } from './errors';
+import { type Currency, type Money, type Precise, M, P, floorDiv, precise, toPrecise, zeroMoney, zeroPrecise } from './money';
+import { type ParticipantId, type Share } from './split';
+import { type LocalDate } from './ports';
 
 export type EntryType = 'expense' | 'transfer' | 'adjustment';
 
