@@ -28,6 +28,8 @@ export default function Overview() {
   const entries = useLiveEntries();
   const names = useNames();
   const locale = i18n.language;
+  /** Hand-booked corrections deserve their own line in the summary (FR-6.2). */
+  const adjustments = entries.filter((e) => e.type === 'adjustment');
 
   if (!hydrated) return <Screen scroll={false}><View /></Screen>;
 
@@ -107,6 +109,28 @@ export default function Overview() {
         </Card>
       )}
 
+      {adjustments.length > 0 && (
+        <Card>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <H2>{t('overview.adjustments')}</H2>
+            <Amount>{formatMoney(M.sum(adjustments.map((e) => e.amount), ccy), locale)}</Amount>
+          </Row>
+          <Body muted style={{ fontSize: 13 }}>{t('overview.adjustmentsHint')}</Body>
+          {adjustments.map((e, i) => (
+            <Pressable key={e.id} onPress={() => { router.push({ pathname: '/entry/[id]', params: { id: e.id } }); }} accessibilityRole="button">
+              {i > 0 && <Divider />}
+              <Row style={{ justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Body numberOfLines={1}>{t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })}</Body>
+                  {e.reason && <Body muted numberOfLines={1} style={{ fontSize: 13 }}>{e.reason}</Body>}
+                </View>
+                <Amount>{formatMoney(e.amount, locale)}</Amount>
+              </Row>
+            </Pressable>
+          ))}
+        </Card>
+      )}
+
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
           <H2>{t('overview.recent')}</H2>
@@ -120,7 +144,7 @@ export default function Overview() {
               <View style={{ flex: 1 }}>
                 <Body numberOfLines={1}>{categoryIcon(e.category, e.type)} {e.description}</Body>
                 <Body muted style={{ fontSize: 13 }}>
-                  {formatDate(e.date, locale)} · {e.type === 'transfer'
+                  {formatDate(e.date, locale)} · {e.type !== 'expense'
                     ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })
                     : t('ledger.paidBy', { name: e.payments.map((p) => names.get(p.participantId) ?? '?').join(', ') })}
                 </Body>

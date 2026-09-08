@@ -13,6 +13,8 @@
     "settled": "Du bist quitt",
     "whoAreYou": "Wer bist du?",
     "tripCost": "Reisekosten",
+    "adjustments": "Umbuchungen",
+    "adjustmentsHint": "Von Hand gebuchte Korrekturen, außerhalb der Ausgaben.",
     "balances": "Salden",
     "recent": "Letzte Einträge",
     "empty": "Noch keine Ausgaben. Tippe auf +, um die erste einzutragen.",

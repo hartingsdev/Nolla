@@ -13,6 +13,8 @@
     "settled": "You are settled",
     "whoAreYou": "Who are you?",
     "tripCost": "Trip cost",
+    "adjustments": "Adjustments",
+    "adjustmentsHint": "Corrections booked by hand, outside the expenses.",
     "balances": "Balances",
     "recent": "Recent entries",
     "empty": "No expenses yet. Tap + to add the first one.",

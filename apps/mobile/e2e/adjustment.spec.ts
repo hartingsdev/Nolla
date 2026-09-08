@@ -41,6 +41,13 @@ test('an adjustment moves money between two people and keeps a reason (FR-6.1)',
   // Two-sided by construction: it cannot move anyone else's balance, or the trip's total.
   expect(await myBalance(page)).toBe(before);
   await expectBalancesSumToZero(page);
+
+  // …and the summary lists it, so a correction is never buried in the ledger (FR-6.2).
+  await page.goto('/');
+  await expect(page.getByText('Adjustments', { exact: true })).toBeVisible();
+  await expect(page.getByText('Corrections booked by hand, outside the expenses.')).toBeVisible();
+  await expect(page.getByText('Robert paid Max in cash before the trip').first()).toBeVisible();
+  await expect(page.getByText('€25.00').first()).toBeVisible();
 });
 
 test('an adjustment without a reason cannot be saved (FR-6.1)', async ({ page }) => {
