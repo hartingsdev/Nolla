@@ -29,3 +29,26 @@ billing deferred. Full rationale in §1.3 of the requirements.
 Start milestone M0 of the architecture plan (monorepo scaffold with the import
 boundary rules), then M1 (money types and split allocation with property
 tests). Q10 (how v0.1 reaches the group) must be settled before M10.
+
+## Development
+
+```
+pnpm install            # Node 22, pnpm 10 (see .nvmrc / packageManager)
+pnpm check              # lint + typecheck + test, what CI runs
+pnpm --filter @vst/domain test:watch
+docker compose up -d    # postgres, minio, mailpit for local API work (from M3 on)
+```
+
+Layout follows [docs/architecture.md](docs/architecture.md) §3. `packages/domain`
+is pure: the import boundary (no framework, ORM, vendor SDK, Node I/O, ambient
+clock or float conversion) is enforced by ESLint and fails the build.
+
+## Progress
+
+- [x] M0 — scaffold, boundary rules, CI, local services
+- [x] M1 — money types, `roundAll` boundary, split allocation, property tests
+- [ ] M2 — ledger, balances, settlement, lifecycle, entitlements
+- [ ] M3 — schema + persistence (Drizzle)
+- [ ] M4 — identity
+- [ ] M5 — API (framework: to be decided — Hono or Fastify)
+- [ ] M6–M11 — client, distribution, the trip

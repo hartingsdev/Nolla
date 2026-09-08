@@ -1,0 +1,10 @@
+{
+  "name": "@vst/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint.base.mjs",
+    "./tsconfig.json": "./tsconfig.json"
+  }
+}

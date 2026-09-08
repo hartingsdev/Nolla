@@ -1,0 +1,10 @@
+{
+  "name": "@vst/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests" },
+  "dependencies": { "zod": "^4.5.4" },
+  "devDependencies": { "vitest": "^5.0.0" }
+}
