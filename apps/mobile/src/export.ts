@@ -20,7 +20,7 @@ const OPTIMAL: PlanOptions = { kind: 'optimal' };
 function labelsFrom(t: (k: string) => string): ExportLabels {
   return {
     trip: t('export.label.trip'), currency: t('export.label.currency'), status: t('export.label.status'), exported: t('export.label.exported'),
-    date: t('export.label.date'), type: t('export.label.type'), description: t('export.label.description'), category: t('export.label.category'),
+    date: t('export.label.date'), type: t('export.label.type'), description: t('export.label.description'), reason: t('entry.reason'), category: t('export.label.category'),
     amount: t('export.label.amount'), paidBy: t('export.label.paidBy'), settled: t('export.label.settled'),
     entries: t('export.label.entries'), totals: t('export.label.totals'), participant: t('export.label.participant'),
     paid: t('export.label.paid'), owed: t('export.label.owed'), transfers: t('export.label.transfers'),

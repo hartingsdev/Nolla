@@ -37,6 +37,7 @@ export interface ExportLabels {
   readonly date: string;
   readonly type: string;
   readonly description: string;
+  readonly reason: string;
   readonly category: string;
   readonly amount: string;
   readonly paidBy: string;
@@ -57,7 +58,7 @@ export interface ExportLabels {
 
 export const defaultExportLabels: ExportLabels = {
   trip: 'Trip', currency: 'Currency', status: 'Status', exported: 'Exported',
-  date: 'Date', type: 'Type', description: 'Description', category: 'Category',
+  date: 'Date', type: 'Type', description: 'Description', reason: 'Reason', category: 'Category',
   amount: 'Amount', paidBy: 'Paid by', settled: 'Settled',
   entries: 'Entries', totals: 'Totals', participant: 'Participant',
   paid: 'Paid', owed: 'Owed', transfers: 'Transfers', balance: 'Balance', total: 'Total',
@@ -149,7 +150,7 @@ export function tripCsv(input: TripExport): string {
 
   // Entries: one row per entry, one column per participant (the sheet's shape).
   rows.push([labels.entries]);
-  rows.push([labels.date, labels.type, labels.description, labels.category, labels.amount, labels.paidBy, ...people.map((p) => safeText(p.name)), labels.settled]);
+  rows.push([labels.date, labels.type, labels.description, labels.reason, labels.category, labels.amount, labels.paidBy, ...people.map((p) => safeText(p.name)), labels.settled]);
   for (const e of entries) {
     const shareOf = new Map(e.shares.map((s) => [s.participantId as string, s.amount]));
     const paidBy = e.payments.map((p) => `${nameOf.get(p.participantId) ?? p.participantId} (${formatMoney(p.amount, d)})`).join(' + ');
@@ -157,7 +158,8 @@ export function tripCsv(input: TripExport): string {
     rows.push([
       e.date,
       labels.types[e.type],
-      safeText(e.description === '' ? e.reason ?? '' : e.description),
+      safeText(e.description),
+      safeText(e.reason ?? ''),   // mandatory on an adjustment (FR-6.1), absent everywhere else
       safeText(e.category ?? ''),
       formatMoney(e.amount, d),
       safeText(paidBy),

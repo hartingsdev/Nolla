@@ -231,8 +231,8 @@ adjustments):
 ### 4.7 Export
 
 `tripCsv` (FR-7.8) turns a trip into the shape of the sheet it replaces: one row
-per entry, one column per participant holding that person's share, then the
-totals block and the settlement plan. It stays in the domain because it is a
+per entry, a reason column for adjustments (FR-6.1), one column per participant
+holding that person's share, then the totals block and the settlement plan. It stays in the domain because it is a
 pure function over the same ledger the screens read — which is what makes the
 export and the balances impossible to disagree.
 

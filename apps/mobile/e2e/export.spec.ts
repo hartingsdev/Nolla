@@ -25,13 +25,13 @@ test('exports the trip as a spreadsheet-shaped CSV (FR-7.8)', async ({ page }) =
 
   // One column per participant, in the order the trip lists them.
   const header = rows.find((r) => r[0] === 'Date') as string[];
-  expect(header.slice(0, 6)).toEqual(['Date', 'Type', 'Description', 'Category', 'Amount', 'Paid by']);
-  expect(header.slice(6, 11)).toEqual(['Yannik', 'Max', 'Robert', 'Tobias', 'Marc']);
+  expect(header.slice(0, 7)).toEqual(['Date', 'Type', 'Description', 'Reason', 'Category', 'Amount', 'Paid by']);
+  expect(header.slice(7, 12)).toEqual(['Yannik', 'Max', 'Robert', 'Tobias', 'Marc']);
 
   // The €55.18 three-way row keeps its sub-cent shares.
   const einkauf = rows.find((r) => r[2] === 'Einkauf Krefeld') as string[];
-  expect(einkauf[4]).toBe('55.18');
-  expect(einkauf.slice(6, 11).every((c) => c.startsWith('11.036'))).toBe(true);
+  expect(einkauf[5]).toBe('55.18');
+  expect(einkauf.slice(7, 12).every((c) => c.startsWith('11.036'))).toBe(true);
 
   // Totals close: both sides equal the trip cost and balances cancel.
   const total = rows.find((r) => r[0] === 'Total') as string[];
@@ -49,7 +49,7 @@ test('German export uses semicolons and decimal commas, so Excel parses it', asy
   const rows = text.replace(/^\uFEFF/, '').split('\r\n').map((r) => r.split(';'));
   expect(rows[0]?.slice(0, 2)).toEqual(['Reise', 'Elsass 2026']);
   const einkauf = rows.find((r) => r[2] === 'Einkauf Krefeld') as string[];
-  expect(einkauf[4]).toBe('55,18');
+  expect(einkauf[5]).toBe('55,18');
   expect(rows.find((r) => r[0] === 'Gesamt')).toBeTruthy();
 });
 

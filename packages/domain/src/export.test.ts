@@ -30,10 +30,10 @@ describe('tripCsv', () => {
   it('lays out one row per entry and one column per participant', () => {
     const rows = rowsOf(tripCsv({ ...base, entries: [dinner] }));
     const header = rows.find((r) => r[0] === 'Date');
-    expect(header).toEqual(['Date', 'Type', 'Description', 'Category', 'Amount', 'Paid by', 'Yannik', 'Max', 'Robert', 'Settled']);
+    expect(header).toEqual(['Date', 'Type', 'Description', 'Reason', 'Category', 'Amount', 'Paid by', 'Yannik', 'Max', 'Robert', 'Settled']);
     const entry = rows[rows.indexOf(header as string[]) + 1] as string[];
-    expect(entry.slice(0, 6)).toEqual(['2026-03-06', 'Expense', 'Dinner', 'food', '55.18', 'Yannik (55.18)']);
-    expect(entry.slice(6, 9)).toEqual(['18.39333333', '18.39333333', '18.39333334']);
+    expect(entry.slice(0, 7)).toEqual(['2026-03-06', 'Expense', 'Dinner', '', 'food', '55.18', 'Yannik (55.18)']);
+    expect(entry.slice(7, 10)).toEqual(['18.39333333', '18.39333333', '18.39333334']);
   });
 
   it('keeps sub-cent precision in shares but prints payable amounts as cents', () => {
@@ -77,6 +77,17 @@ describe('tripCsv', () => {
     expect(csv.indexOf('Dinner')).toBeLessThan(csv.indexOf('Later'));
   });
 
+  it('keeps an adjustment\'s reason, which is the only record of why it exists', () => {
+    const adj: Entry = entryFromWire({
+      id: 'e9', type: 'adjustment', description: 'Adjustment', reason: 'Robert paid Max in cash', amount: '25.00', ccy: 'EUR',
+      date: '2026-03-05', createdAt: '2026-03-05T09:00:00.000Z',
+      payments: [{ participantId: 'r', amount: '25.00' }],
+      shares: [{ participantId: 'm', amount: '25.00000000' }],
+    });
+    const row = rowsOf(tripCsv({ ...base, entries: [adj] })).find((r) => r[1] === 'Adjustment') as string[];
+    expect(row.slice(2, 4)).toEqual(['Adjustment', 'Robert paid Max in cash']);
+  });
+
   it('appends the settlement plan when one is given', () => {
     const plan = {
       kind: 'optimal' as const, minimal: true,
@@ -94,7 +105,7 @@ describe('tripCsv', () => {
     expect(csv).toContain('55,18');
     expect(csv).toContain(';');
     // The decimal comma must not be mistaken for a field separator.
-    expect(csv.split('\r\n').find((r) => r.startsWith('2026-03-06'))?.split(';')).toHaveLength(10);
+    expect(csv.split('\r\n').find((r) => r.startsWith('2026-03-06'))?.split(';')).toHaveLength(11);
   });
 
   it('neutralises text a spreadsheet would run as a formula, without touching amounts', () => {
