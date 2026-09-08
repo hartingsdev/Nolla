@@ -77,12 +77,13 @@ export default function EntryDetail() {
         <H1>{icon} {formatMoney(e.amount, locale)}</H1>
         <Body muted>{formatDate(e.date, locale)} · {t(`entry.type.${e.type}`)}{e.category ? ` · ${t(`category.${e.category}`)}` : ''}</Body>
         <Body muted>
-          {e.type === 'transfer'
+          {e.type !== 'expense'
             ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })
             : t('ledger.paidBy', { name: e.payments.map((p) => `${names.get(p.participantId) ?? '?'}${e.payments.length > 1 ? ` (${formatMoney(p.amount, locale)})` : ''}`).join(', ') })}
         </Body>
+        {e.reason && <Body muted>{t('entry.reason')}: {e.reason}</Body>}
       </Card>
-      {e.type !== 'transfer' && (
+      {e.type === 'expense' && (
         <Card>
           <H2>{t('entry.shares')}</H2>
           {e.shares.map((s, i) => {

@@ -12,7 +12,7 @@ import { space, useTheme } from '../theme';
 import { Body, Button, Card, Chip, H2, Row, Screen } from './ui';
 import { CATEGORIES, CATEGORY_ICON } from '../categories';
 
-type Kind = 'expense' | 'transfer';
+type Kind = 'expense' | 'transfer' | 'adjustment';
 /** How the amount is divided (FR-3.1–3.5). The rule is applied at save time, not stored. */
 type Mode = 'equal' | 'weights' | 'percent' | 'exact';
 
@@ -38,27 +38,29 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const locale = i18n.language;
   const plain = plainFor(locale);
 
-  const initKind: Kind = initial?.type === 'transfer' ? 'transfer' : 'expense';
+  const initKind: Kind = initial?.type ?? 'expense';
   const [kind, setKind] = useState<Kind>(allowed.includes(initKind) ? initKind : (allowed[0] ?? 'expense'));
   const [amountRaw, setAmountRaw] = useState(initial ? plain(initial.amount) : '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [refund, setRefund] = useState(initial ? initial.amount.minor < 0n : false);
+  /** Mandatory on an adjustment (FR-6.1): a correction nobody can explain is worse than none. */
+  const [reason, setReason] = useState(initial?.reason ?? '');
   const [date, setDate] = useState<string>(initial && !clone ? initial.date : todayLocal());
   const [category, setCategory] = useState<string | null>(initial?.category ?? null);
   // expense: payers (1..n) with per-payer amounts when several
-  const [payers, setPayers] = useState<string[]>(initial && initial.type !== 'transfer' ? initial.payments.map((p) => p.participantId) : meId ? [meId] : []);
+  const [payers, setPayers] = useState<string[]>(initial?.type === 'expense' ? initial.payments.map((p) => p.participantId) : meId ? [meId] : []);
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
-    initial && initial.type !== 'transfer' && initial.payments.length > 1 ? Object.fromEntries(initial.payments.map((p) => [p.participantId, plain(p.amount)])) : {});
-  const [among, setAmong] = useState<Set<string>>(() => new Set(initial && initial.type !== 'transfer' ? initial.shares.map((s) => s.participantId) : participants.map((p) => p.id)));
+    initial?.type === 'expense' && initial.payments.length > 1 ? Object.fromEntries(initial.payments.map((p) => [p.participantId, plain(p.amount)])) : {});
+  const [among, setAmong] = useState<Set<string>>(() => new Set(initial?.type === 'expense' ? initial.shares.map((s) => s.participantId) : participants.map((p) => p.id)));
   // Only equal and exact can be recovered from stored shares; a weighted entry
   // reopens as the exact amounts it produced, which is lossless if not literal.
   const [mode, setMode] = useState<Mode>(() => {
-    if (!initial || initial.type === 'transfer') return 'equal';
+    if (initial?.type !== 'expense') return 'equal';
     const first = initial.shares[0]?.amount.scaled ?? 0n;
     return initial.shares.every((s) => { const d = s.amount.scaled - first; return d >= -1n && d <= 1n; }) ? 'equal' : 'exact';
   });
   const [exact, setExact] = useState<Record<string, string>>(() => {
-    if (!initial || initial.type === 'transfer') return {};
+    if (initial?.type !== 'expense') return {};
     const shown = roundAll(initial.shares.map((s) => s.amount), initial.amount, initial.id);
     return Object.fromEntries(initial.shares.map((s, i) => [s.participantId, plain(shown[i] ?? zeroMoney(ccy))]));
   });
@@ -67,8 +69,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [percents, setPercents] = useState<Record<string, string>>({});
   // transfer
-  const [from, setFrom] = useState<string | null>(initial?.type === 'transfer' ? initial.payments[0]?.participantId ?? null : meId);
-  const [to, setTo] = useState<string | null>(initial?.type === 'transfer' ? initial.shares[0]?.participantId ?? null : null);
+  const [from, setFrom] = useState<string | null>(initial && initial.type !== 'expense' ? initial.payments[0]?.participantId ?? null : meId);
+  const [to, setTo] = useState<string | null>(initial && initial.type !== 'expense' ? initial.shares[0]?.participantId ?? null : null);
   const [error, setError] = useState<string | null>(null);
 
   const amount: Money | null = (() => {
@@ -135,13 +137,15 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     const createdAt = initial && !clone ? initial.createdAt : new Date().toISOString();
     try {
       let entry: Entry;
-      if (kind === 'transfer') {
+      if (kind !== 'expense') {
         if (!from || !to || from === to) { setError(t('entry.invalid.transfer')); return; }
+        if (kind === 'adjustment' && !reason.trim()) { setError(t('entry.invalid.reason')); return; }
         entry = {
-          id, type: 'transfer', description: description.trim() || t('entry.paymentDefault'), amount, date: localDate(date),
+          id, type: kind, description: description.trim() || t(kind === 'adjustment' ? 'entry.adjustmentDefault' : 'entry.paymentDefault'), amount, date: localDate(date),
           payments: [{ participantId: from as ParticipantId, amount }],
           shares: [{ participantId: to as ParticipantId, amount: toPrecise(amount) }],
           createdAt, deleted: false,
+          ...(kind === 'adjustment' ? { reason: reason.trim() } : {}),
         };
       } else {
         if (!description.trim()) { setError(t('entry.invalid.description')); return; }
@@ -169,14 +173,16 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     || (shareResidual !== null && !M.isZero(shareResidual))
     || (mode === 'weights' && weightSum === 0n)
     || (mode === 'percent' && bpsResidual !== 0n);
-  const disabled = !amount || (kind === 'expense' && (selected.length === 0 || splitIncomplete || (payerResidual !== null && !M.isZero(payerResidual)))) || (kind === 'transfer' && (!from || !to || from === to));
+  const disabled = !amount
+    || (kind === 'expense' && (selected.length === 0 || splitIncomplete || (payerResidual !== null && !M.isZero(payerResidual))))
+    || (kind !== 'expense' && (!from || !to || from === to))
+    || (kind === 'adjustment' && !reason.trim());
 
   return (
     <Screen>
       {allowed.length > 1 && (
         <Row>
-          <Chip label={t('entry.type.expense')} selected={kind === 'expense'} onPress={() => { setKind('expense'); }} />
-          <Chip label={t('entry.type.transfer')} selected={kind === 'transfer'} onPress={() => { setKind('transfer'); }} />
+          {allowed.map((k) => <Chip key={k} label={t(`entry.type.${k}`)} selected={kind === k} onPress={() => { setKind(k); }} />)}
         </Row>
       )}
 
@@ -191,11 +197,18 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
           </Row>
         )}
         <H2>{t('entry.description')}</H2>
-        <TextInput value={description} onChangeText={setDescription} placeholder={kind === 'transfer' ? t('entry.paymentDefault') : t('entry.descriptionPlaceholder')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.description')} />
+        <TextInput value={description} onChangeText={setDescription} placeholder={kind === 'expense' ? t('entry.descriptionPlaceholder') : t(kind === 'adjustment' ? 'entry.adjustmentDefault' : 'entry.paymentDefault')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.description')} />
         {kind === 'expense' && (
           <>
             <H2>{t('category.label')}</H2>
             <Row>{CATEGORIES.map((c) => <Chip key={c} label={`${CATEGORY_ICON[c]} ${t(`category.${c}`)}`} selected={category === c} onPress={() => { setCategory(category === c ? null : c); }} />)}</Row>
+          </>
+        )}
+        {kind === 'adjustment' && (
+          <>
+            <H2>{t('entry.reason')}</H2>
+            <TextInput value={reason} onChangeText={setReason} placeholder={t('entry.reasonPlaceholder')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.reason')} />
+            <Body muted style={{ fontSize: 13 }}>{t('entry.reasonHint')}</Body>
           </>
         )}
         <H2>{t('entry.date')}</H2>
@@ -205,7 +218,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         </Row>
       </Card>
 
-      {kind === 'transfer' ? (
+      {kind !== 'expense' ? (
         <Card>
           <H2>{t('entry.from')}</H2>
           <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={from === p.id} onPress={() => { setFrom(p.id); }} />)}</Row>

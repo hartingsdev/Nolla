@@ -78,7 +78,8 @@
       "payers": "Zahlerbeträge müssen den Gesamtbetrag ergeben",
       "weights": "Mindestens eine Person braucht einen Anteil",
       "percent": "Die Prozentwerte müssen zusammen 100 % ergeben",
-      "tip": "Das Trinkgeld ist größer als der Betrag"
+      "tip": "Das Trinkgeld ist größer als der Betrag",
+      "reason": "Bitte den Grund für die Umbuchung angeben"
     },
     "newPayment": "Neue Zahlung",
     "from": "Von",
@@ -91,6 +92,11 @@
     "deletedBanner": "Dieser Eintrag ist gelöscht.",
     "yourShare": "Dein Anteil",
     "paymentDefault": "Zahlung",
+    "adjustmentDefault": "Umbuchung",
+    "newAdjustment": "Neue Umbuchung",
+    "reason": "Grund",
+    "reasonPlaceholder": "z. B. Robert hat Max vor der Reise bar bezahlt",
+    "reasonHint": "Eine Umbuchung verschiebt Geld zwischen zwei Personen ohne Zahlung. Der Grund bleibt am Eintrag.",
     "sameAgain": "Nochmal so",
     "markSharePaid": "Meinen Anteil als bezahlt markieren",
     "markPaidFor": "Bezahlt für {{name}}",

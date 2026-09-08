@@ -78,7 +78,8 @@
       "payers": "Payer amounts must add up to the total",
       "weights": "At least one person needs a share",
       "percent": "Percentages must add up to 100%",
-      "tip": "The tip is larger than the amount"
+      "tip": "The tip is larger than the amount",
+      "reason": "Say why this adjustment is needed"
     },
     "newPayment": "New payment",
     "from": "From",
@@ -91,6 +92,11 @@
     "deletedBanner": "This entry is deleted.",
     "yourShare": "Your share",
     "paymentDefault": "Payment",
+    "adjustmentDefault": "Adjustment",
+    "newAdjustment": "New adjustment",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g. Robert paid Max in cash before the trip",
+    "reasonHint": "An adjustment moves money between two people without a payment. The reason is kept with the entry.",
     "sameAgain": "Same again",
     "markSharePaid": "Mark my share paid",
     "markPaidFor": "Mark paid for {{name}}",

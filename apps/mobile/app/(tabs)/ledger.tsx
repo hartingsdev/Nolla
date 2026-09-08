@@ -8,7 +8,7 @@ import { useEntries, useLiveEntries, useNames, useParticipants, usePendingEntryI
 import { space, useTheme } from '../../src/theme';
 import { Amount, Body, Card, Chip, Row, Screen } from '../../src/components/ui';
 
-type TypeFilter = 'all' | 'expense' | 'transfer';
+type TypeFilter = 'all' | 'expense' | 'transfer' | 'adjustment';
 
 export default function Ledger() {
   const { t, i18n } = useTranslation();
@@ -41,7 +41,7 @@ export default function Ledger() {
       <TextInput value={query} onChangeText={setQuery} placeholder={t('ledger.search')} placeholderTextColor={th.muted} accessibilityLabel={t('ledger.search')}
         style={{ backgroundColor: th.card, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: th.border }} />
       <Row>
-        {(['all', 'expense', 'transfer'] as const).map((k) => (
+        {(['all', 'expense', 'transfer', 'adjustment'] as const).map((k) => (
           <Chip key={k} label={k === 'all' ? t('ledger.all') : t(`entry.type.${k}`)} selected={type === k} onPress={() => { setType(k); }} />
         ))}
         {deletedCount > 0 && <Chip label={showDeleted ? t('ledger.hideDeleted') : `${t('ledger.showDeleted')} (${String(deletedCount)})`} selected={showDeleted} onPress={() => { setShowDeleted((v) => !v); }} />}
@@ -68,14 +68,15 @@ export default function Ledger() {
                 <View style={{ flex: 1 }}>
                   <Body numberOfLines={1} style={{ textDecorationLine: e.deleted ? 'line-through' : 'none' }}>{categoryIcon(e.category, e.type)} {e.description}{e.deleted ? ` · ${t('ledger.deleted')}` : ''}</Body>
                   <Body muted style={{ fontSize: 13 }}>
-                    {pending.has(e.id) ? `${t('sync.queued')} · ` : ''}{formatDate(e.date, locale)} · {t(`entry.type.${e.type}`)} · {e.type === 'transfer'
+                    {pending.has(e.id) ? `${t('sync.queued')} · ` : ''}{formatDate(e.date, locale)} · {t(`entry.type.${e.type}`)} · {e.type !== 'expense'
                       ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })
                       : t('ledger.paidBy', { name: e.payments.map((p) => names.get(p.participantId) ?? '?').join(', ') })}
                   </Body>
                 </View>
                 <Amount tone={e.amount.minor < 0n ? 'positive' : 'neutral'}>{formatMoney(e.amount, locale)}</Amount>
               </Row>
-              {e.type !== 'transfer' && <Body muted style={{ fontSize: 12, color: th.muted }}>{e.shares.map((s) => names.get(s.participantId) ?? '?').join(' · ')}</Body>}
+              {e.type === 'expense' && <Body muted style={{ fontSize: 12, color: th.muted }}>{e.shares.map((s) => names.get(s.participantId) ?? '?').join(' · ')}</Body>}
+              {e.reason && <Body muted style={{ fontSize: 12 }} numberOfLines={1}>{t('entry.reason')}: {e.reason}</Body>}
             </Card>
           </Pressable>
         )}

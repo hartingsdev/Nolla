@@ -400,8 +400,8 @@ an entry whose shares do not sum to its total.
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-6.1 | S | Book a manual adjustment with a **mandatory reason** (replaces `Umbuchung für die Gesamtzeile`). An adjustment is always two-sided — from one participant to another, or between one participant and the group split by the usual rules — so it has the same payments-in / shares-out shape as every other entry and cannot break Σ balances == 0 (I2). A one-sided "add €70 to Robert" is not expressible. |
-| FR-6.2 | S | Adjustments are visually distinct in the ledger and listed in the trip summary. |
+| FR-6.1 | S | Book a manual adjustment with a **mandatory reason** (replaces `Umbuchung für die Gesamtzeile`). An adjustment is always two-sided — from one participant to another, or between one participant and the group split by the usual rules — so it has the same payments-in / shares-out shape as every other entry and cannot break Σ balances == 0 (I2). A one-sided "add €70 to Robert" is not expressible. *Shipped as the two-participant form (from → to, reason required); the split-among-the-group variant is still open.* |
+| FR-6.2 | S | Adjustments are visually distinct in the ledger and listed in the trip summary. *Shipped: 🧾 icon, own ledger filter, reason on the row and the detail; the trip summary listing is still open.* |
 | FR-6.3 | M | The app must never require an adjustment to make totals reconcile — FR-9.1 guarantees that. |
 
 ### FR-7 Balances and overview
