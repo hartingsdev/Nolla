@@ -32,7 +32,10 @@ export const base = tseslint.config(
     // Plain-JS scripts and config files are not part of a tsconfig project.
     files: ['**/*.mjs', '**/*.cjs', '**/*.js'],
     ...tseslint.configs.disableTypeChecked,
-    languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly' },
+    },
   },
   {
     // Tests may use `!` on values they just constructed.
