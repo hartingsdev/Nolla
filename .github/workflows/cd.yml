@@ -1,0 +1,88 @@
+name: cd
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:          # builds the image (without pushing) so a broken Dockerfile fails the PR
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  api-image:
+    name: API container image → GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/api
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke the built image (starts, fails only on the missing DATABASE_URL)
+        if: github.event_name == 'pull_request'
+        run: |
+          docker build -f apps/api/Dockerfile -t vst-api:pr . -q
+          set +e; docker run --rm vst-api:pr; code=$?; set -e
+          test "$code" = "2"   # exit 2 = "missing env DATABASE_URL": the bundle loaded and reached main
+
+  web:
+    name: Web build → GitHub Pages
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Export the web build
+        run: pnpm --filter @vst/mobile export:web
+        env:
+          CI: 1
+          WEB_BASE_PATH: /${{ github.event.repository.name }}
+          # Without an API the app runs in local-only mode; set the repository variable to point it at a hosted API.
+          EXPO_PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL || '' }}
+      - name: SPA fallback for deep links (Pages serves 404.html for unknown paths)
+        run: cp apps/mobile/dist/index.html apps/mobile/dist/404.html
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/mobile/dist
+      - id: deploy
+        uses: actions/deploy-pages@v4

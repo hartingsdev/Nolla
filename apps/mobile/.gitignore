@@ -1,5 +1,4 @@
 dist/
 .expo/
-expo-env.d.ts
 playwright-report/
 test-results/

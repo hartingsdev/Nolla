@@ -7,9 +7,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -20,8 +20,9 @@ jobs:
       - run: pnpm check:no-floats
       - name: Validate Prometheus rules and Grafana dashboards
         run: |
-          docker run --rm -v "$PWD/ops/prometheus:/p:ro" --entrypoint promtool prom/prometheus:v3.5.0 check rules /p/alerts.yml
-          docker run --rm -v "$PWD/ops/prometheus:/p:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /p/prometheus.yml
+          # mounted at the path the config references, so credentials_file resolves
+          docker run --rm -v "$PWD/ops/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 check rules /etc/prometheus/alerts.yml
+          docker run --rm -v "$PWD/ops/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
           for f in ops/grafana/dashboards/*.json; do jq -e .uid "$f" > /dev/null; done
       - run: pnpm --filter @vst/mobile export:web
         env:
@@ -39,9 +40,9 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U vst" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -70,9 +71,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -85,7 +86,7 @@ jobs:
       - run: pnpm --filter @vst/mobile e2e:only
         env:
           CI: 1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: playwright-report

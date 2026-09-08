@@ -60,4 +60,5 @@ export class ApiClient {
   devMagicLinks() { return this.request<{ links: { to: string; url: string }[] }>('GET', '/dev/magic-links'); }
 }
 
-export const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+const apiUrlFromEnv = (process.env.EXPO_PUBLIC_API_URL ?? '').trim(); // CI may pass an empty string
+export const DEFAULT_API_URL = apiUrlFromEnv === '' ? 'http://localhost:8080' : apiUrlFromEnv;
