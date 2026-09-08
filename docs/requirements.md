@@ -1,15 +1,23 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.1** · Owner: project team · Date: 2026-09-08
+Status: **Draft v1.3** · Owner: project team · Date: 2026-09-08
 
-Changes in v1.2: both stores at launch; English source with German shipped in
-v0.1; receipt retention configurable per trip (12-month default, purge deferred);
-paid tiers planned as an axis-agnostic entitlement model; three decisions
-explicitly deferred (D13, D15, D16). Earlier —
-Changes in v1.1: platform decision reversed to native app-store distribution;
-accounts required up front; multi-tenant schema from day one; hosting deferred
-behind portability constraints; sheet import and its test fixture both dropped;
-money moved to a two-tier precision model (§5.1). See §1.3 for the decision log.
+**Changelog**
+
+- v1.3 — review pass: explicit `Participant` entity (placeholders, claiming,
+  tombstoning); adjustments made two-sided so Σ balances == 0 holds; settlement
+  spec corrected (greedy is not always minimal — exact search for small n);
+  trip lifecycle `open → settling → closed` defined; FR-3.6 acceptance aligned
+  with the precision model; `trip_id` used consistently.
+- v1.2 — both stores at launch; English source with German shipped in v0.1;
+  receipt retention per trip (12-month default, purge deferred); paid tiers as
+  an axis-agnostic entitlement model; D13, D15, D16 explicitly deferred.
+- v1.1 — native app-store distribution instead of a PWA; accounts required up
+  front; multi-tenant schema; hosting deferred behind portability constraints;
+  sheet import and fixture dropped; two-tier money precision (§5.1).
+- v1.0 — initial requirements derived from the spreadsheet.
+
+See §1.3 for the decision log.
 
 This document does the requirements engineering for a group travel expense
 tracker that replaces the spreadsheet the group currently maintains. It defines
@@ -43,8 +51,9 @@ manual arithmetic and no reconciliation drift.
 
 ### 1.2 Non-goals (explicitly out of scope for v1)
 
-- Executing real money transfers (no PSP/banking integration; we only *link out*
-  to PayPal.me / generate SEPA payment data).
+- Moving money **between members** (no PSP/banking integration; we only *link
+  out* to PayPal.me / generate SEPA payment data). The app's own future
+  subscription (FR-12.7) is a separate matter and goes through the stores.
 - Bank/credit-card statement import.
 - Budgeting, forecasting or savings goals.
 - Trip planning: itineraries, bookings, packing lists.
@@ -62,26 +71,26 @@ Resolved 2026-09-08. These supersede the open questions in the v1.0 draft.
 |---|---|---|---|
 | D1 | **Native app, published to the App Store and Play Store** — React Native (Expo), one TypeScript codebase, with the web build shipped alongside | The owner wants store distribution and sees a possible product for others | Two developer accounts (Apple $99/yr, Google $25 once), release review cycles, store compliance work (NFR-15); the web build stays the zero-install path for someone joining mid-trip |
 | D2 | **Account required up front** — Sign in with Apple / Google / e-mail, before joining a trip | Clean identity, cross-device from day one, simplest support and audit story as a product | A signup wall during a trip; mitigated by placeholder participants (FR-1.3), which become load-bearing rather than a convenience. Apple: offering Google sign-in obliges Sign in with Apple (FR-1.10); having accounts obliges in-app deletion (FR-1.9) |
-| D3 | **Hosting deferred, portability enforced** | "Scalable, decide later" | Three binding constraints (NFR-14): `group_id` on every row, no query spanning groups, domain logic free of framework and vendor imports. No managed-auth or managed-storage shortcuts in the core |
+| D3 | **Hosting deferred, portability enforced** | "Scalable, decide later" | Three binding constraints (NFR-14): `trip_id` on every row, no query spanning trips, domain logic free of framework and vendor imports. No managed-auth or managed-storage shortcuts in the core |
 | D4 | **Single currency in the MVP, multi-currency later** | The sheet is entirely EUR | `currency` and `fx_rate` columns exist from the first migration, unused in v0.1 — a feature flag later, not a migration (FR-2.8) |
 | D5 | **Build for this group; don't foreclose the product** | Ship for the next trip, keep the door open | Multi-tenant schema, no hardcoded participants, pure domain module — roughly 10% over a single-group build. Product scaffolding deferred per §1.2 |
 | D6 | **In scope**: per-share paid status (FR-7.4), per-person tip (FR-3.7), preferred-creditor routing (FR-8.5) | All three reflect real group behaviour | As specified, v0.2 |
 | D7 | **Sheet import and the golden fixture both dropped** | Neither the importer nor a transcribed test fixture is wanted | No import UI, no spreadsheet-derived test data. Correctness rests on property-based tests over the invariants (NFR-11, NFR-13) |
+| D8 | **Two-tier money precision** — high-precision derived values, integer minor units for anything payable | Rounding per expense lets one member absorb the odd cent repeatedly; keeping shares exact removes that drift entirely | Shares and balances are exact to 8 decimal places; rounding happens at exactly two boundaries, display and settlement (§5.1). Replaces the earlier "integer cents everywhere" rule |
 | D9 | **Both stores at launch** (Q9) | Expo builds both from one source; the group is mixed iOS/Android, so shipping one first excludes friends from the trip the app was built for | Two developer accounts, two review queues, two listings. Development effort roughly unchanged |
 | D10 | **English source strings, German shipped from v0.1** (Q14) | The group is German-speaking, but a product needs an English source; retrofitting i18n means extracting every hardcoded string | i18n plumbing and one translation pass in v0.1 (~1 day). Locale-aware formatting regardless (NFR-8) |
-| D11 | **Receipt retention configurable per trip, default 12 months; purge job deferred to v0.2** (Q12) | Storage is the real cost driver, so retention is a per-trip lever — but the deletion job is not MVP-critical | The *metadata* is mandatory from day one: a retention setting on every trip and `uploaded_at` on every receipt, so the purge job ships later with no backfill (FR-12.5). Storage grows unbounded until it does — accepted, and tracked as a risk |
+| D11 | **Receipt retention configurable per trip, default 12 months; purge job deferred to v0.2** (Q12) | Storage is the real cost driver, so retention is a per-trip lever — but the deletion job is not MVP-critical | The *metadata* is mandatory from day one: a retention setting on every trip and `uploaded_at` on every receipt, so the purge job ships later with no backfill (FR-12.4). Storage grows unbounded until it does — accepted, and tracked as a risk |
 | D12 | **Paid tiers planned; billing deferred** (Q13) | The owner intends to charge, most likely for storage, but demand is unproven | v0.1 builds the entitlement model only: a plan on each account, every limit check routed through one service (FR-12.1–12.3). No billing, no in-app purchase, no paywall UI. Apple and Google require digital subscriptions to go through IAP at a 15–30% cut — that shapes pricing whenever it happens, and is why no Stripe-style flow can live in the app |
 | D13 | **Deferred: what the paid tier gates** (Q15) | Owner will decide later | Forces the entitlement model to be *axis-agnostic*: a plan carries a set of named limits, and no limit is special-cased in the domain. Costs a little indirection, buys the freedom to pick the axis later |
 | D14 | **v0.1 ships through a non-public channel** (Q10) | Whether TestFlight/internal testing or sideloaded dev builds is undecided, but neither needs a public listing | The store listing, screenshots and marketing assets stay out of v0.1 either way. FR-1.9, FR-1.10 and the privacy forms are still built in v0.1, since they gate the eventual listing and are expensive to retrofit |
 | D15 | **Deferred: the specific test-distribution channel** (Q10) | Undecided | Decide before v0.1 ships. TestFlight needs a paid Apple account and light review; free-account sideloading expires every 7 days and needs re-signing per device |
 | D16 | **E-mail and push behind a `Notifier` port** (Q11) | Portability (D3); volume is unknown | v0.1 wires a throwaway implementation (Expo push, any SMTP for magic links). The core depends on the port, never a vendor SDK (NFR-14). Swapping later is one adapter |
-| D8 | **Two-tier money precision** — high-precision derived values, integer minor units for anything payable | Rounding per expense lets one member absorb the odd cent repeatedly; keeping shares exact removes that drift entirely | Shares and balances are exact to 8 decimal places; rounding happens at exactly two boundaries, display and settlement (§5.1). Replaces the earlier "integer cents everywhere" rule |
 
 **Scale path implied by D3** (the shape this category of app takes): stateless API
 behind a load balancer → managed Postgres → object storage with signed URLs for
 receipts → CDN for the app shell → APNs/FCM for push. Data partitions perfectly
 by trip — no cross-user queries, no feed, no global joins — so the path is
-vertical Postgres → read replicas → partition by `group_id`, and sharding stays
+vertical Postgres → read replicas → partition by `trip_id`, and sharding stays
 theoretical at this size. The cost driver at scale is receipt images and push,
 not ledger rows.
 
@@ -109,8 +118,8 @@ Personas:
 
 | Term | Definition |
 |---|---|
-| **Trip** | A container for participants, a currency, and a ledger of entries. Also called a group. |
-| **Participant** | A person in a trip. May be a registered user or a name-only placeholder. |
+| **Trip** | A container for participants, a currency, and a ledger of entries. The tenant of the system: every row carries its `trip_id`. |
+| **Participant** | A person *in a trip* — the thing shares and payments point at. Linked to a User once claimed; a **placeholder** until then; **tombstoned** (name kept, identity detached) if the user deletes their account. |
 | **Entry** | Any line in the ledger. One of: Expense, Reimbursement, Transfer, Adjustment. |
 | **Expense** | Money that left the group, paid by one (or more) participants, split among beneficiaries. |
 | **Payer** | Participant(s) who actually paid the merchant. The sheet's `an wen?` column. |
@@ -119,12 +128,15 @@ Personas:
 | **Reimbursement** | Money that came *into* the group and reduces cost (bottle deposit `Pfandsammlung`, cashback, refund). Modeled as a negative expense. |
 | **Transfer** | A payment from one participant directly to another (the sheet's `Zahlung` rows). Settles debt; is *not* a trip cost. |
 | **Adjustment** | A manual correction booked against a participant's balance, with mandatory reason (the sheet's `Umbuchung`). |
-| **Balance** | For a participant: total paid + reimbursements received − total owed. Positive = is owed money (creditor). |
+| **Balance** | For a participant: Σ payments − Σ shares across every entry type (expenses, reimbursements, transfers, adjustments). Positive = is owed money (creditor). Held as `Precise`. |
+| **Residual** | The sub-cent difference that appears when a `Precise` value is rounded to `Money`. Always attributed to a named participant, never dropped (§5.1 P4). |
+| **Plan / entitlement** | The set of named limits an account is entitled to; resolved per trip through one service (FR-12). v0.1 has a single all-permitting plan. |
 | **Gross debt matrix** | Who owes whom before netting (sheet rows 42–46). |
 | **Settlement plan** | The list of transfers that brings all balances to zero (sheet rows 49–53). |
 | **Bilateral netting** | Cancelling debts only between pairs: A owes B €21.88, B owes A €11.75 → A pays B €10.13. |
 | **Optimal settlement** | The minimum number of transfers that clears all balances group-wide. |
-| **Settled / Closed** | A trip whose settlement plan is fully executed and which becomes read-only. |
+| **Settling** | Trip state after the plan is frozen: no new expenses, transfers still being recorded against the plan. |
+| **Closed** | Trip state once every balance is zero at `Money` precision; read-only. |
 
 ---
 
@@ -186,39 +198,60 @@ impossible, not merely easier to spot:
 ## 5. Domain model
 
 ```
-User ──< Membership >── Trip ──< Entry ──< Share
-                          │        │
-                          │        ├─ Payment (who fronted the money, n≥1)
-                          │        └─ Attachment (receipt photo)
-                          ├─ Currency (base)
-                          └─ SettlementPlan (derived)
+User ──< Membership >── Trip ──< Participant
+ │                       │            ▲  (shares and payments point here,
+ └─ Plan                 │            │   never at User or Membership)
+                         ├──< Entry ──┼─< Share       (participant, Precise amount)
+                         │            ├─< Payment     (participant, Money amount)
+                         │            └─< Attachment  (uploaded_at)
+                         ├─ base currency, timezone, retention setting
+                         └─ SettlementPlan  (derived on demand, never stored)
 ```
 
 **Entities**
 
-- **User** — identity (email/OAuth or anonymous device identity), display name.
-- **Trip** — name, base currency, date range, members, status
-  (`open` | `settling` | `closed`), created_by.
-- **Membership** — user ↔ trip, role (`member` | `admin`), `joined_at`,
-  `left_at` (a person who joins late is not a beneficiary of earlier expenses).
+- **User** — identity (Sign in with Apple / Google / e-mail), display name,
+  `plan` (FR-12). Deleting a User (FR-1.9) detaches it from its Participants;
+  it never deletes trip data.
+- **Trip** — the tenant. Name, base currency, timezone, date range, status
+  (`open` | `settling` | `closed`), retention setting (FR-12.4), created_by.
+- **Membership** — user ↔ trip, role (`member` | `admin`). Access control only;
+  money never points at a Membership.
+- **Participant** — a person *as they appear in one trip*: display name,
+  `user_id` (nullable — null means a **placeholder**, FR-1.3), `joined_at`,
+  `left_at`, `tombstoned_at`. Shares and Payments reference Participants, which
+  is what lets a placeholder be split against before they sign up, be claimed
+  later with all history following (FR-1.11), and survive the user's account
+  deletion (FR-1.9).
 - **Entry** — `type` ∈ {`expense`, `transfer`, `adjustment`}, description,
-  amount (signed, minor units), currency + FX rate to base, date, category,
-  created_by, created_at, deleted_at, note.
-- **Payment** — (entry, participant, amount) — who put the money down. Supports
-  more than one payer per expense.
-- **Share** — (entry, participant, amount, weight?) — who owes what. Sum of
-  share amounts == entry amount, enforced.
-- **Attachment** — receipt image/PDF bound to an entry.
+  `amount` (`Money`, signed — negative for reimbursements), `currency` +
+  `fx_rate` to base (D4), `date` (a calendar date in the trip's timezone, not a
+  timestamp), category, note, `reason` (mandatory for adjustments),
+  created_by, created_at, deleted_at, version.
+- **Payment** — (entry, participant, amount: `Money`) — who put the money down.
+  More than one per expense is allowed (FR-2.3).
+- **Share** — (entry, participant, amount: `Precise`, weight?) — who owes what.
+- **Attachment** — receipt image/PDF bound to an entry; `uploaded_at` (FR-12.4).
+
+**One shape for every entry type.** Expenses, transfers and adjustments are all
+"payments in, shares out": a transfer A → B is a Payment by A and a Share to B; an
+adjustment is the same with a mandatory reason (FR-6.1). Only `expense` entries
+count toward trip cost. This is what makes the invariants below hold
+universally rather than per type.
 
 **Invariants** (see FR-9):
 
-- I1: for every entry, `Σ shares == Σ payments == entry.amount`
-- I2: for every trip, `Σ over participants of balance == 0`
+- I1: for every entry, `Σ shares == Σ payments == entry.amount`, evaluated at
+  `Precise` precision (shares are `Precise`; payments and the total are `Money`)
+- I2: for every trip, `Σ over participants of balance == 0` — follows from I1
+  because every entry type has the same shape
 - I3: money follows the two-tier precision model of §5.1 — derived values exact
   to 8 dp, payable values as signed integers in minor units; no binary floats
   anywhere, in storage, transport or arithmetic
-- I4: a `transfer` moves balance between two participants and contributes €0 to
-  trip cost
+- I4: `transfer` and `adjustment` entries contribute €0 to trip cost; only
+  `expense` entries do
+- I5: a `closed` trip has every balance at zero at `Money` precision, and
+  accepts no writes
 
 ---
 
@@ -285,10 +318,10 @@ Priority uses MoSCoW: **M** = must (MVP), **S** = should (v1), **C** = could
 |---|---|---|
 | FR-1.1 | M | Create a trip with name, base currency, optional start/end date. |
 | FR-1.2 | M | Invite members via a share link. Opening it requires an account: Sign in with Apple, Google, or e-mail magic link (D2). The link resolves to the trip after sign-in, never before. |
-| FR-1.3 | M | Add a **placeholder participant** (name only, no account) so someone offline can still be split against, and later merge them into a real user. |
+| FR-1.3 | M | Add a **placeholder participant** (name only, no account) so someone who hasn't installed or signed in can still be split against. Claimed later per FR-1.11. |
 | FR-1.4 | S | Roles: any member can add/edit entries; only admins can delete members, close the trip, or edit a closed trip. |
 | FR-1.5 | S | A member who joins on day 3 is excluded by default from earlier expenses (`joined_at`). |
-| FR-1.6 | S | Remove a member only if they hold a zero balance; otherwise require settlement first. |
+| FR-1.6 | S | Remove a participant from a trip only if they hold a zero balance; otherwise require settlement first. (Distinct from account deletion, FR-1.9, which never removes a participant — it detaches the user and leaves the participant tombstoned.) |
 | FR-1.7 | C | Multiple trips per user, with an archive view. |
 | FR-1.8 | C | Sub-groups within a trip ("the 3 who did Rulantica") as reusable split presets. |
 | FR-1.9 | M | **In-app account deletion** that removes the account and its personal data, per App Store guideline 5.1.1(v). Deleting an account with a non-zero balance must not corrupt other members' ledgers: the participant is tombstoned (display name retained, identity detached) and the trip's entries stay intact. |
@@ -309,7 +342,7 @@ the signup wall never blocks *other people's* expense entry.
 | FR-2.2 | M | Edit and soft-delete any entry; deletions are reversible and visible in history. |
 | FR-2.3 | M | Payer selectable from participants; **multiple payers** with explicit amounts (replaces `an wen?`). |
 | FR-2.4 | S | Category with icon (rent, groceries, fuel, tolls, parking, restaurant, activity, other) — derived from the sheet's actual rows. |
-| FR-2.5 | S | Attach one or more receipt photos, camera-first on mobile. Client-side compression before upload; every receipt records `uploaded_at` for retention (FR-12.5). |
+| FR-2.5 | S | Attach one or more receipt photos, camera-first on mobile. Client-side compression before upload; every receipt records `uploaded_at` for retention (FR-12.4). |
 | FR-2.6 | S | Allow a €0.00 entry as a placeholder to be filled in later; flag it as incomplete. |
 | FR-2.7 | S | Duplicate an entry ("same again"), and templates for recurring costs (fuel, tolls). |
 | FR-2.8 | C | Multi-currency: enter in local currency, store FX rate to base, show both. |
@@ -320,7 +353,7 @@ the signup wall never blocks *other people's* expense entry.
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-3.1 | M | Split among a selectable subset of participants (default: all active members). |
+| FR-3.1 | M | Split among a selectable subset of participants (default: every participant present at the entry's date, placeholders included). |
 | FR-3.2 | M | **Equal** split. |
 | FR-3.3 | M | Include/exclude toggle per participant, one tap each. |
 | FR-3.4 | M | **Exact amounts** per participant (covers `Casamore`, `Essen Saarbrücken`). |
@@ -331,8 +364,10 @@ the signup wall never blocks *other people's* expense entry.
 | FR-3.9 | C | Itemized split: enter line items, assign each to people, tip/tax distributed proportionally. |
 | FR-3.10 | C | Named split presets ("everyone but Marc"). |
 
-**Acceptance (FR-3.6):** €55.18 split equally among 5 produces shares
-11.04/11.04/11.04/11.03/11.03 summing to exactly 55.18; no UI path can persist
+**Acceptance (FR-3.6):** €55.18 split equally among 5 stores five shares of
+exactly €11.036 (`Precise`), whose sum is exactly €55.18; the display rounds them
+per P4 to 11.04 / 11.04 / 11.04 / 11.03 / 11.03, which also sum to €55.18, with
+the two members who show €11.03 chosen deterministically. No UI path can persist
 an entry whose shares do not sum to its total.
 
 ### FR-4 Reimbursements and negative amounts
@@ -349,7 +384,7 @@ an entry whose shares do not sum to its total.
 |---|---|---|
 | FR-5.1 | M | Record a payment from participant A to participant B with amount and date (the `Zahlung` rows). It changes balances but adds €0 to trip cost. |
 | FR-5.2 | M | Transfers appear in the ledger, filterable and separable from expenses. |
-| FR-5.3 | S | Mark a transfer as *proposed* → *confirmed by recipient*; only confirmed transfers clear debt in the "already settled" view, while both are visible. |
+| FR-5.3 | S | A recorded transfer counts toward balances immediately (as the sheet's `Zahlung` rows do). The recipient is notified and can **dispute** it; a disputed transfer stays in the balance but is flagged on both members' views until resolved or deleted. |
 | FR-5.4 | S | One-tap "settle up" that pre-fills a transfer from the settlement plan. |
 | FR-5.5 | C | Deep-link to PayPal.me / generate SEPA QR (EPC) or a copyable IBAN block for the recipient. |
 | FR-5.6 | W | Executing the payment inside the app. |
@@ -358,7 +393,7 @@ an entry whose shares do not sum to its total.
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-6.1 | S | Book a manual adjustment against one or more participants with a **mandatory reason** (replaces `Umbuchung für die Gesamtzeile`). |
+| FR-6.1 | S | Book a manual adjustment with a **mandatory reason** (replaces `Umbuchung für die Gesamtzeile`). An adjustment is always two-sided — from one participant to another, or between one participant and the group split by the usual rules — so it has the same payments-in / shares-out shape as every other entry and cannot break Σ balances == 0 (I2). A one-sided "add €70 to Robert" is not expressible. |
 | FR-6.2 | S | Adjustments are visually distinct in the ledger and listed in the trip summary. |
 | FR-6.3 | M | The app must never require an adjustment to make totals reconcile — FR-9.1 guarantees that. |
 
@@ -380,24 +415,24 @@ an entry whose shares do not sum to its total.
 | ID | Priority | Requirement |
 |---|---|---|
 | FR-8.1 | S | Gross debt matrix, who-owes-whom before netting (sheet rows 42–46). |
-| FR-8.2 | M | **Bilateral netting** view — matches what the group does today, so the first run can be cross-checked against the sheet. |
+| FR-8.2 | M | **Bilateral netting** view — the plan the group builds by hand today, so the numbers read as familiar: you pay the person you actually owe. |
 | FR-8.3 | M | **Optimal settlement**: minimal set of transfers clearing all balances; show the transfer count saved vs bilateral. |
 | FR-8.4 | S | Let the user choose the algorithm; explain the trade-off (fewest transfers vs "I pay the person I actually owe"). |
-| FR-8.5 | S | Pin a preferred creditor ("route everything through Robert") as a constraint on the settlement plan: every debtor makes one transfer to the pinned member, who then settles outward. Show the cost — total transfers rises, but most members make exactly one. *Confirmed in scope (D6).* |
+| FR-8.5 | S | Pin a hub ("route everything through Robert"): every other member makes or receives exactly one transfer, with the hub; the hub handles up to n−1. Total transfers are exactly the number of non-hub members with a non-zero balance — never fewer than optimal (FR-8.3), often equal, and simpler to execute. Show the count next to the other plans. *Confirmed in scope (D6).* |
 | FR-8.6 | M | Every proposed transfer is one tap away from being recorded as a real transfer (FR-5.4). |
-| FR-8.7 | S | Close a trip: settlement plan frozen, trip read-only, reopening requires an admin and is logged. |
+| FR-8.7 | S | Trip lifecycle: `open` → **`settling`** (an admin freezes the plan; no new expenses, transfers still recorded against it; balances visibly count down) → **`closed`** (automatic once every balance is zero at `Money` precision, I5; read-only). An admin can move `settling` back to `open` — logged — if an expense was forgotten; `closed` → `open` also requires an admin and is logged. |
 | FR-8.8 | S | Share the settlement plan as text/image into WhatsApp. |
 
 ### FR-9 Correctness guarantees
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-9.1 | M | Invariants I1–I4 (§5) enforced in the domain layer and asserted by database constraints/tests; violations are impossible to persist, not merely reported. |
+| FR-9.1 | M | Invariants I1–I5 (§5) enforced in the domain layer and asserted by database constraints/tests; violations are impossible to persist, not merely reported. |
 | FR-9.2 | M | The two-tier precision model of §5.1 is enforced by the type system: `Money` and `Precise` are distinct types, converting `Precise` → `Money` is only possible through the boundary function that applies P4, and binary floats are absent from storage, transport and arithmetic. |
 | FR-9.3 | M | Balances are **derived** from entries and never stored as an editable field. |
 | FR-9.4 | S | A "reconciliation" self-check surfaced in the UI: Σ balances == 0, Σ shares == Σ expenses, evaluated at full `Precise` precision. |
-| FR-9.6 | S | Display honesty: where a rounded figure differs from the exact one, the UI must not present the rounded value as exact. Rounded per-share amounts always sum to the displayed total (P4); a settlement residual is attributed to a named member, not hidden. |
 | FR-9.5 | S | Concurrent edits resolved without silent loss (per-entry versioning; last-writer-wins with a conflict notice). |
+| FR-9.6 | S | Display honesty: where a rounded figure differs from the exact one, the UI must not present the rounded value as exact. Rounded per-share amounts always sum to the displayed total (P4); a settlement residual is attributed to a named member, not hidden. |
 
 ### FR-10 Collaboration, history, notifications
 
@@ -425,9 +460,9 @@ Consequence of D11–D13. The MVP builds the *mechanism*, not the commerce.
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-12.1 | M | Every account carries a **plan**; every trip resolves an effective set of limits from its members' plans. v0.1 ships a single plan granting everything — the model exists, the restriction does not. |
+| FR-12.1 | M | Every account carries a **plan**; a trip's effective limits are resolved from the plan of the member who created it (the one paying for its storage, so the one whose plan applies). v0.1 ships a single plan granting everything — the model exists, the restriction does not. |
 | FR-12.2 | M | All limit checks go through **one entitlement service**. No feature queries a plan directly, and no limit is special-cased in the domain layer — the gating axis is undecided (D13), so nothing may assume which limit matters. |
-| FR-12.3 | S | Receipt retention is a plan-derived attribute with a per-trip override (D11); default **12 months** after a trip closes. |
+| FR-12.3 | S | Receipt retention is a plan-derived attribute with a per-trip override (D11); default **12 months**, counted from the trip's close date or, for a trip never closed, from its last entry — so an abandoned trip is purged too. |
 | FR-12.4 | M | Each trip stores its retention setting, and each receipt its `uploaded_at`, from the first migration — so the purge job (FR-12.6) needs no backfill. |
 | FR-12.5 | S | Members are warned before receipts are purged, with time to export. |
 | FR-12.6 | C | The **purge job** itself: delete receipts past retention, log the deletion, keep the entry that referenced them intact. Deferred to v0.2 (D11); until it ships, storage grows without bound. |
@@ -438,13 +473,16 @@ Consequence of D11–D13. The MVP builds the *mechanism*, not the commerce.
 
 ## 7. Settlement algorithm specification
 
-Notation: `b_i` = balance of participant *i* in minor units. `b_i > 0` ⇒ *i* is
-owed money.
+Notation: `b_i` = balance of participant *i*, a `Precise` value. `b_i > 0` ⇒ *i*
+is owed money.
 
 ```
-b_i = Σ payments_i + Σ adjustments_i + Σ transfers_out_i
-    − Σ shares_i                     − Σ transfers_in_i
+b_i = Σ payments_i − Σ shares_i        over every entry type
 ```
+
+One formula because every entry type has the same shape (§5): a transfer out is
+a payment, a transfer in is a share, an adjustment is one or the other with a
+reason. I2 (Σ b_i == 0) follows directly from I1.
 
 **Bilateral netting (FR-8.2)** — reproduces today's sheet:
 build the gross matrix `D[a][b]` = what *a* owes *b*, accumulated per entry
@@ -456,11 +494,21 @@ Yannik €21.88 and Yannik owes Max €11.75 → Max pays Yannik **€10.13**. Y
 owes Robert €150.54, Robert owes Yannik €41.88 → Yannik pays Robert **€108.66**.
 This is documentation of the algorithm, not a test fixture (D7).
 
-**Optimal settlement (FR-8.3):** greedy max-debtor/max-creditor matching over
-the balance vector, producing at most *n−1* transfers; ties broken
-deterministically so the plan is stable across recomputations. (Exact
-minimum-cardinality settlement is NP-hard; greedy is optimal in transfer count
-for the group sizes involved here — n ≤ 20 — and we cap the search.)
+**Optimal settlement (FR-8.3):** the minimum number of transfers is
+*n − k*, where *k* is the largest number of disjoint zero-sum subsets the
+non-zero balances can be partitioned into; finding *k* is NP-hard in general.
+Two implementations, selected by group size:
+
+- *n ≤ 12:* **exact** — subset-sum dynamic programming over the 2ⁿ balance
+  subsets (≈ 3ⁿ ≈ 5·10⁵ steps at n = 12, trivial), then greedy inside each
+  zero-sum subset. Guaranteed minimal.
+- *n > 12:* **greedy** max-debtor ↔ max-creditor matching, at most *n − 1*
+  transfers. Not always minimal: balances `[+2, +3, −4, −5, +4]` take 4
+  transfers under greedy but 3 optimally (`{+4, −4}` and `{+2, +3, −5}`). Good
+  enough where exact search would be slow, and n > 12 is rare for this product.
+
+Ties are broken by stable participant order so the plan is identical on
+recomputation.
 
 **Rounding boundary (§5.1 P3).** Balances enter the algorithm as `Precise` and
 leave it as `Money`: settlement is the point where exactness ends, because the
@@ -490,10 +538,10 @@ applying the plan drives every balance to exactly zero.
 | NFR-8 | i18n / l10n | **English source strings, German shipped from v0.1** (D10). No user-facing string hardcoded in a component; all text extracted from the first commit. Locale-aware number and date formatting (`€1.234,56` vs `€1,234.56`); currency symbol per trip. |
 | NFR-9 | Accessibility | WCAG 2.1 AA: don't encode meaning in colour alone (the sheet's green cells need an icon/label equivalent), touch targets ≥ 44 px, screen-reader labels. |
 | NFR-10 | Cost | Hostable for < €10/month at this group size. |
-| NFR-11 | Maintainability | Split/settlement logic in a pure, framework-free module with property-based tests: invariants I1–I4 and the precision rules P1–P6 expressed as properties over generated trips (random amounts, participant counts, split rules, refunds and transfers). This is the primary correctness net. |
+| NFR-11 | Maintainability | Split/settlement logic in a pure, framework-free module with property-based tests: invariants I1–I5 and the precision rules P1–P7 expressed as properties over generated trips (random amounts, participant counts, split rules, refunds and transfers). This is the primary correctness net. |
 | NFR-12 | Observability | Error tracking + a daily invariant check alerting if any trip's balances don't sum to zero. |
 | NFR-13 | Testability | No spreadsheet-derived fixtures or import tooling (D7). Correctness is demonstrated by the property tests of NFR-11 plus worked unit cases for the known-hard splits (n-way indivisible amounts, refunds, mixed exact/equal, settlement residuals). CI fails on any invariant violation. |
-| NFR-14 | Portability | Hosting is deferred (D3), so three constraints are binding from the first commit: (a) `group_id` on every row; (b) no query, index or job that spans groups; (c) the domain layer imports no framework, ORM or vendor SDK. Managed auth and managed storage may be used at the edges, never inside the core. |
+| NFR-14 | Portability | Hosting is deferred (D3), so three constraints are binding from the first commit: (a) `trip_id` on every row; (b) no query, index or job that spans trips; (c) the domain layer imports no framework, ORM or vendor SDK. Managed auth and managed storage may be used at the edges, never inside the core. |
 | NFR-15 | Store compliance | Both stores at launch (D9). Release-blocking, not polish: privacy nutrition labels / Data Safety form, in-app account deletion (FR-1.9), Sign in with Apple parity (FR-1.10), a reachable privacy policy and support URL, age rating. Digital subscriptions must use in-app purchase on both platforms (15–30%), which constrains any future pricing (FR-12.7). Listing assets are deferred with the public launch (D14); the compliance items above are not. Budget review latency into every release. |
 
 ---
@@ -502,6 +550,9 @@ applying the plan drives every balance to exactly zero.
 
 **Screen inventory (MVP)**
 
+0. **Sign-in / join** — Sign in with Apple, Google or e-mail (D2); an invite
+   link lands here first, then on the trip, then on "which participant are
+   you?" (claim a placeholder or create a new one).
 1. **Trip list** → open trips with my balance per trip.
 2. **Trip home** — my balance headline ("You owe €254.99"), per-person balance
    list, recent entries, big ⊕ Add button.
@@ -512,7 +563,10 @@ applying the plan drives every balance to exactly zero.
 5. **Entry detail** — shares, payer, receipt, history, comments.
 6. **Balances & settle up** — matrix + settlement plan, per-transfer "Mark as
    paid".
-7. **Trip settings** — members, invite link, currency, close trip.
+7. **Trip settings** — participants (add placeholder, remove), invite link,
+   currency, retention, freeze plan / reopen.
+8. **Account** — display name, linked sign-in methods, export my data, **delete
+   account** (FR-1.9, required by the stores).
 
 **Key flows**
 
@@ -522,8 +576,12 @@ applying the plan drives every balance to exactly zero.
   amount updates live (`Rulantica` case).
 - *Uneven meal:* switch to Exact tab, type each amount; save blocked while the
   residual ≠ 0, with a one-tap "put the rest on me".
-- *Settle up:* Balances → pick plan (Bilateral | Fewest transfers) → "Mark paid"
-  → transfer recorded, recipient gets a confirmation prompt.
+- *Settle up:* Balances → pick plan (Bilateral | Fewest transfers | Via Robert)
+  → "Mark paid" → transfer recorded and counted at once; recipient is notified
+  and can dispute (FR-5.3).
+- *Join mid-trip:* Robert adds "Lena" as a placeholder on day 1 and splits
+  dinner against her; Lena installs on day 3, signs in, opens the link, claims
+  "Lena" — her dinner share is already on her balance.
 
 ---
 
@@ -537,8 +595,9 @@ Shaped by D1 (stores), D2 (accounts), D3 (portability), D5 (multi-tenant).
   review latency for non-native fixes.
 - **Server:** small REST/RPC API + Postgres. Entries are append-mostly; shares
   live in a child table with a deferred constraint asserting Σ shares == entry
-  amount. Every table carries `group_id` (NFR-14) and row-level access is
-  filtered by membership.
+  amount. `Participant` is its own table (nullable `user_id` for placeholders and
+  tombstones); shares and payments reference it, never `User`. Every table
+  carries `trip_id` (NFR-14) and row-level access is filtered by membership.
 - **Money:** two types per §5.1 — `Money{amount: bigint minor units, currency}`
   for payable values and `Precise{amount: DECIMAL(20,8), currency}` for derived
   shares and balances. No `float`/`double` column anywhere; money crosses the
@@ -574,7 +633,7 @@ FR-1.1–1.3, FR-1.9–1.10, FR-2.1–2.3, FR-3.1–3.4, FR-3.6, FR-4.1, FR-5.1�
 FR-7.1–7.3, FR-8.2, FR-8.3, FR-8.6, FR-9.1–9.3, FR-9.6, FR-10.1, FR-11.1,
 FR-12.1–12.2, FR-12.4, NFR-8, NFR-11, NFR-13–15.
 *Exit criteria:* (a) the property suite (NFR-11) passes, including the precision
-rules P1–P6; (b) the five of you run a whole trip in it without opening a
+rules P1–P7; (b) the five of you run a whole trip in it without opening a
 spreadsheet.
 
 *Distribution note:* v0.1 needs no public store listing (D14). The channel —
@@ -593,7 +652,8 @@ each of them cheap now and invasive later.
 Receipt purge job (FR-12.6), categories, receipts, per-share settled status (FR-7.4), gross matrix (FR-8.1),
 preferred-creditor routing (FR-8.5), tips (FR-3.7), weights/percentages
 (FR-3.5), ledger filters + drill-down, adjustments (FR-6), audit trail
-(FR-10.2), offline write (FR-11.2), export (FR-7.8), German/English (NFR-8).
+(FR-10.2), offline write (FR-11.2), export (FR-7.8), trip lifecycle with
+freeze/reopen (FR-8.7), transfer dispute (FR-5.3).
 
 **v0.3 — "shippable to others"**
 Statistics, payment deep links (FR-5.5), push notifications, comments,
@@ -603,7 +663,7 @@ support URL, store listing assets, crash reporting. Billing and in-app purchase
 (FR-12.7) only once the gating axis is decided (D13).
 
 **Later / evaluate**
-Receipt OCR, itemized splits, sub-group presets, monetisation.
+Receipt OCR, itemized splits, sub-group presets.
 
 ---
 
@@ -632,7 +692,7 @@ Answered questions Q1–Q9, Q11, Q12, Q14 are recorded in §1.3.
 | **App-store review delays a mid-trip fix** | You can't patch a bug while travelling | TestFlight/internal builds for the group; Expo over-the-air updates for JS-only fixes; the web build as an always-current escape hatch |
 | **Apple rejection on account rules** | Launch blocked late | FR-1.9 and FR-1.10 built in v0.1, not retrofitted |
 | Rounding disputes over cents | Trust | Exact shares held at full precision, rounding confined to the display and settlement boundaries (§5.1); the residual is always attributed to a named member, never hidden |
-| **Precision model leaks** — a `Precise` value rounded early, or a float sneaking in via JSON | Silent drift returns, harder to spot than before | Distinct types with conversion only through the boundary function (FR-9.2); lint ban on float types in the domain package; P1–P6 asserted as properties |
+| **Precision model leaks** — a `Precise` value rounded early, or a float sneaking in via JSON | Silent drift returns, harder to spot than before | Distinct types with conversion only through the boundary function (FR-9.2); lint ban on float types in the domain package; P1–P7 asserted as properties |
 | Someone edits history after settling | Trust | Closed trips read-only; audit trail; reopen requires admin |
 | Receipt storage cost/privacy | Cost, GDPR | Client-side compression, retention limit (Q12), signed URLs |
 | **Product ambition (D5) inflates the MVP** | Never ships — the doc's original top risk, now likelier | D5 is a schema and structure commitment only; every product-facing feature stays behind the §1.2 line until a real trip has run |
