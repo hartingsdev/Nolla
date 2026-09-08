@@ -129,3 +129,36 @@ test('percentages that do not divide evenly still add up to exactly 100%', async
   await expect(page.getByText('€33.34')).toBeVisible();
   await expectBalancesSumToZero(page);
 });
+
+test('a per-person tip comes off the top and lands on everyone in the split (FR-3.7)', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('120');
+  await page.getByLabel('Description').first().fill('Abendessen');
+  await setPayer(page, 'Marc');
+  await page.getByLabel('Tip per person', { exact: true }).fill('4');
+  // €20 of the €120 is tip; the remaining €100 splits five ways, so €24 each.
+  await expect(page.getByText('€20.00 of the amount is tip, split before the rest.')).toBeVisible();
+  await expect(page.getByText('€24.00 per person')).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await page.getByText('Abendessen').first().click();
+  expect(await page.getByText(/^€24\.00$/).count()).toBe(5);
+  await expectBalancesSumToZero(page);
+});
+
+test('a tip only reaches the people in the split, and cannot exceed the amount', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('120');
+  await page.getByLabel('Description').first().fill('Bar');
+  await setPayer(page, 'Marc');
+  await page.getByRole('button', { name: 'Tobias', exact: true }).nth(1).click();  // out of the split
+  await page.getByRole('button', { name: 'Marc', exact: true }).nth(1).click();
+  await page.getByLabel('Tip per person', { exact: true }).fill('5');
+  // Three people: €15 tip, €105 base, €35 + €5 each.
+  await expect(page.getByText('€15.00 of the amount is tip, split before the rest.')).toBeVisible();
+  await expect(page.getByText('€40.00 per person')).toBeVisible();
+
+  await page.getByLabel('Tip per person', { exact: true }).fill('45');
+  await expect(page.getByText('The tip is larger than the amount')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+});

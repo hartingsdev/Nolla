@@ -40,6 +40,8 @@
     "descriptionPlaceholder": "z. B. Einkauf, Tanken, Abendessen",
     "paidBy": "Bezahlt von",
     "splitAmong": "Aufteilen auf",
+    "tipPerPerson": "Trinkgeld p. P.",
+    "tipTotal": "{{amount}} des Betrags ist Trinkgeld und wird vorab verteilt.",
     "split": {
       "equal": "Gleich",
       "exact": "Genaue Beträge",
@@ -75,7 +77,8 @@
       "transfer": "Zwei verschiedene Personen wählen",
       "payers": "Zahlerbeträge müssen den Gesamtbetrag ergeben",
       "weights": "Mindestens eine Person braucht einen Anteil",
-      "percent": "Die Prozentwerte müssen zusammen 100 % ergeben"
+      "percent": "Die Prozentwerte müssen zusammen 100 % ergeben",
+      "tip": "Das Trinkgeld ist größer als der Betrag"
     },
     "newPayment": "Neue Zahlung",
     "from": "Von",

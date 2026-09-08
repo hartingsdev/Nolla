@@ -40,6 +40,8 @@
     "descriptionPlaceholder": "e.g. Groceries, Fuel, Dinner",
     "paidBy": "Paid by",
     "splitAmong": "Split among",
+    "tipPerPerson": "Tip per person",
+    "tipTotal": "{{amount}} of the amount is tip, split before the rest.",
     "split": {
       "equal": "Equal",
       "exact": "Exact amounts",
@@ -75,7 +77,8 @@
       "transfer": "Pick two different people",
       "payers": "Payer amounts must add up to the total",
       "weights": "At least one person needs a share",
-      "percent": "Percentages must add up to 100%"
+      "percent": "Percentages must add up to 100%",
+      "tip": "The tip is larger than the amount"
     },
     "newPayment": "New payment",
     "from": "From",

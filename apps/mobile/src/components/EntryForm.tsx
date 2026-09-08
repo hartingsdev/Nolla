@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Switch, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
-  type Entry, type Money, type ParticipantId, type Payment, type SplitRule, BPS_TOTAL, DomainError, M, allocate, exactResidual, localDate, moneyFromString, moneyToString, roundAll, toPrecise, validateEntry, zeroMoney,
+  type Entry, type Money, type ParticipantId, type Payment, type SplitRule, type Surcharge, BPS_TOTAL, DomainError, M, allocate, exactResidual, localDate, moneyFromString, moneyToString, roundAll, toPrecise, validateEntry, zeroMoney,
 } from '@vst/domain';
 import { formatMoney, normalizeAmountInput } from '../format';
 import { bpsToText, parseBps, parseWeight, seedPercents } from '../split-input';
@@ -62,6 +62,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     const shown = roundAll(initial.shares.map((s) => s.amount), initial.amount, initial.id);
     return Object.fromEntries(initial.shares.map((s, i) => [s.participantId, plain(shown[i] ?? zeroMoney(ccy))]));
   });
+  /** Per-person tip carved out of the amount (FR-3.7, the sheet's `Trinkgeld p.P.`). */
+  const [tipRaw, setTipRaw] = useState('');
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [percents, setPercents] = useState<Record<string, string>>({});
   // transfer
@@ -78,7 +80,12 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
 
   const selected = participants.filter((p) => among.has(p.id));
   const exactAmounts = selected.map((p) => parse(exact[p.id]));
-  const shareResidual = amount && kind === 'expense' && mode === 'exact' ? exactResidual(amount, exactAmounts) : null;
+  // The tip is part of what was paid, so it comes off the top and the rest is split by the rule.
+  const tip = refund ? zeroMoney(ccy) : parse(tipRaw);
+  const surcharges: Surcharge[] = M.isZero(tip) ? [] : selected.map((p) => ({ participantId: p.id as ParticipantId, amount: tip }));
+  const tipTotal = M.sum(surcharges.map((x) => x.amount), ccy);
+  const tipTooBig = amount !== null && M.cmp(tipTotal, M.abs(amount)) > 0;
+  const shareResidual = amount && kind === 'expense' && mode === 'exact' ? exactResidual(amount, exactAmounts, surcharges) : null;
   const multiPayer = payers.length > 1;
   const payerResidual = amount && kind === 'expense' && multiPayer
     ? M.sub(amount, M.sum(payers.map((id) => { const m = parse(payerAmounts[id]); return amount.minor < 0n ? M.neg(m) : m; }), ccy))
@@ -102,7 +109,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   /** What each person would owe, in the order of `selected`. Null while the inputs don't add up. */
   const previewShares: Money[] | null = (() => {
     if (!amount || !rule) return null;
-    try { return roundAll(allocate(amount, rule, { seed: 'preview' }).map((s) => s.amount), amount, 'preview'); } catch { return null; }
+    try { return roundAll(allocate(amount, rule, { seed: 'preview', surcharges }).map((s) => s.amount), amount, 'preview'); } catch { return null; }
   })();
   const preview = mode === 'equal' ? previewShares?.[0] ?? null : null;
 
@@ -147,7 +154,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         if (mode === 'weights' && weightSum === 0n) { setError(t('entry.invalid.weights')); return; }
         if (mode === 'percent' && bpsResidual !== 0n) { setError(t('entry.invalid.percent')); return; }
         if (!rule) { setError(t('entry.invalid.split')); return; }
-        entry = { id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments, shares: allocate(amount, rule, { seed: id }), createdAt, deleted: false, ...(category ? { category } : {}) };
+        if (tipTooBig) { setError(t('entry.invalid.tip')); return; }
+        entry = { id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments, shares: allocate(amount, rule, { seed: id, surcharges }), createdAt, deleted: false, ...(category ? { category } : {}) };
       }
       validateEntry(entry);
       onSave(entry);
@@ -157,7 +165,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   };
 
   const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: th.border } as const;
-  const splitIncomplete = (shareResidual !== null && !M.isZero(shareResidual))
+  const splitIncomplete = tipTooBig
+    || (shareResidual !== null && !M.isZero(shareResidual))
     || (mode === 'weights' && weightSum === 0n)
     || (mode === 'percent' && bpsResidual !== 0n);
   const disabled = !amount || (kind === 'expense' && (selected.length === 0 || splitIncomplete || (payerResidual !== null && !M.isZero(payerResidual)))) || (kind === 'transfer' && (!from || !to || from === to));
@@ -229,6 +238,15 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
           <Card>
             <H2>{t('entry.splitAmong')}</H2>
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={among.has(p.id)} onPress={() => { toggleAmong(p.id); }} />)}</Row>
+            {!refund && (
+              <Row style={{ justifyContent: 'space-between' }}>
+                <Body style={{ flex: 1 }}>{t('entry.tipPerPerson')}</Body>
+                <TextInput value={tipRaw} onChangeText={setTipRaw} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
+                  style={[inputStyle, { width: 120, textAlign: 'right' }]} accessibilityLabel={t('entry.tipPerPerson')} />
+              </Row>
+            )}
+            {!M.isZero(tipTotal) && !tipTooBig && <Body muted style={{ fontSize: 13 }}>{t('entry.tipTotal', { amount: formatMoney(tipTotal, locale) })}</Body>}
+            {tipTooBig && <Body style={{ color: th.negative }}>{t('entry.invalid.tip')}</Body>}
             <Row>
               <Chip label={t('entry.split.equal')} selected={mode === 'equal'} onPress={() => { setMode('equal'); }} />
               <Chip label={t('entry.split.weights')} selected={mode === 'weights'} onPress={() => { setMode('weights'); }} />
