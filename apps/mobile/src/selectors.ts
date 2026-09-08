@@ -49,3 +49,21 @@ export function useNames(): Map<string, string> {
   const participants = useStore((s) => s.participants);
   return useMemo(() => new Map(participants.map((p) => [p.id, p.name])), [participants]);
 }
+
+/** Which writes the trip's status admits right now (FR-8.7). */
+export function useWriteRules() {
+  const status = useStore((s) => s.trip.status);
+  return {
+    status,
+    canWriteExpense: status === 'open',
+    canWriteTransfer: status !== 'closed',
+    canEdit: status === 'open',
+    readOnly: status === 'closed',
+  };
+}
+
+/** True when every rounded balance is zero — the precondition for closing (I5). */
+export function useAllSettled(): boolean {
+  const { shown } = useBalances();
+  return [...shown.values()].every((m) => m.minor === 0n);
+}

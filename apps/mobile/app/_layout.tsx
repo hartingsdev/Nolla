@@ -18,7 +18,9 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerStyle: { backgroundColor: t.card }, headerTintColor: t.text, contentStyle: { backgroundColor: t.bg } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="entry/new" options={{ presentation: 'modal', title: tr('entry.new') }} />
-        <Stack.Screen name="entry/[id]" options={{ title: tr('entry.shares') }} />
+        <Stack.Screen name="entry/[id]/index" options={{ title: tr('entry.shares') }} />
+        <Stack.Screen name="entry/[id]/edit" options={{ presentation: 'modal', title: tr('entry.edit') }} />
+        <Stack.Screen name="person/[id]" options={{ title: '' }} />
         <Stack.Screen name="participants" options={{ title: tr('participants.title') }} />
         <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
       </Stack>

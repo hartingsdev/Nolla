@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { type ParticipantId, type PlanOptions, type Transfer, entryToWire, toPrecise } from '@vst/domain';
 import { formatMoney, formatPrecise } from '../../src/format';
 import { todayLocal, uuidv7 } from '../../src/ids';
-import { useNames, usePlan } from '../../src/selectors';
+import { useNames, usePlan, useWriteRules } from '../../src/selectors';
 import { useStore } from '../../src/store';
 import { space } from '../../src/theme';
 import { Amount, Body, Button, Card, Chip, Divider, H2, Row, Screen } from '../../src/components/ui';
@@ -16,6 +16,7 @@ export default function Settle() {
   const participants = useStore((s) => s.participants);
   const addEntry = useStore((s) => s.addEntry);
   const names = useNames();
+  const rules = useWriteRules();
   const [kind, setKind] = useState<Kind>('optimal');
   const [hub, setHub] = useState<string | null>(null);
   const hubId = (hub ?? participants[0]?.id ?? '') as ParticipantId;
@@ -69,7 +70,7 @@ export default function Settle() {
               <Body style={{ flex: 1 }}>{t('settle.pays', { from: names.get(tr.from) ?? '?', to: names.get(tr.to) ?? '?' })}</Body>
               <Amount size={18}>{formatMoney(tr.amount, locale)}</Amount>
             </Row>
-            <Button kind="secondary" label={t('settle.markPaid')} onPress={() => { markPaid(tr); }} />
+            <Button kind="secondary" label={t('settle.markPaid')} onPress={() => { markPaid(tr); }} disabled={!rules.canWriteTransfer} />
           </View>
         ))}
       </Card>

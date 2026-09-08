@@ -7,11 +7,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { type WireEntry } from '@vst/domain';
+import { type TripStatus, type WireEntry } from '@vst/domain';
 import { sampleTrip } from './sample';
 
 export interface Participant { readonly id: string; readonly name: string }
-export interface TripMeta { readonly id: string; readonly name: string; readonly ccy: string; readonly timezone: string }
+export interface TripMeta { readonly id: string; readonly name: string; readonly ccy: string; readonly timezone: string; readonly status: TripStatus }
 
 interface State {
   trip: TripMeta;
@@ -26,6 +26,9 @@ interface Actions {
   readonly addEntry: (e: WireEntry) => void;
   readonly updateEntry: (e: WireEntry) => void;
   readonly deleteEntry: (id: string) => void;
+  readonly restoreEntry: (id: string) => void;
+  readonly setStatus: (status: TripStatus) => void;
+  readonly setTripMeta: (patch: Partial<Pick<TripMeta, 'name' | 'ccy'>>) => void;
   readonly addParticipant: (p: Participant) => void;
   readonly removeParticipant: (id: string) => void;
   readonly setMe: (id: string | null) => void;
@@ -35,7 +38,7 @@ interface Actions {
 }
 
 const empty: Omit<State, 'hydrated'> = {
-  trip: { id: 'local', name: 'My trip', ccy: 'EUR', timezone: 'Europe/Berlin' },
+  trip: { id: 'local', name: 'My trip', ccy: 'EUR', timezone: 'Europe/Berlin', status: 'open' },
   participants: [],
   entries: [],
   meId: null,
@@ -51,6 +54,9 @@ export const useStore = create<State & Actions>()(
       addEntry: (e) => set((s) => ({ entries: [...s.entries, e] })),
       updateEntry: (e) => set((s) => ({ entries: s.entries.map((x) => (x.id === e.id ? e : x)) })),
       deleteEntry: (id) => set((s) => ({ entries: s.entries.map((x) => (x.id === id ? { ...x, deleted: true } : x)) })),
+      restoreEntry: (id) => set((s) => ({ entries: s.entries.map((x) => (x.id === id ? { ...x, deleted: false } : x)) })),
+      setStatus: (status) => set((s) => ({ trip: { ...s.trip, status } })),
+      setTripMeta: (patch) => set((s) => ({ trip: { ...s.trip, ...patch } })),
       addParticipant: (p) => set((s) => ({ participants: [...s.participants, p] })),
       removeParticipant: (id) => set((s) => ({ participants: s.participants.filter((p) => p.id !== id), meId: s.meId === id ? null : s.meId })),
       setMe: (meId) => set({ meId }),
@@ -60,6 +66,12 @@ export const useStore = create<State & Actions>()(
     }),
     {
       name: 'trip-ledger:v1',
+      version: 2,
+      migrate: (persisted, version) => {
+        const p = persisted as Omit<Partial<State>, 'trip'> & { trip?: Partial<TripMeta> };
+        if (version < 2 && p.trip) return { ...p, trip: { ...p.trip, status: p.trip.status ?? 'open' } };
+        return p;
+      },
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({ trip: s.trip, participants: s.participants, entries: s.entries, meId: s.meId, locale: s.locale }),
       onRehydrateStorage: () => (state) => { state?.setHydrated(); },

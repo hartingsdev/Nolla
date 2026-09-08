@@ -51,6 +51,7 @@ clock or float conversion) is enforced by ESLint and fails the build.
 - [x] M1 — money types, `roundAll` boundary, split allocation, property tests
 - [x] M2 — ledger, balances, gross matrix, three settlement plans, lifecycle, entitlements
 - [x] UI (pulled forward) — Expo app shell: overview, ledger, settle up, add expense, entry detail, participants, settings; local-only store; EN + DE
+- [x] UI batch 2 — edit entries, date, multiple payers, direct payments, delete/restore, per-person drill-down, trip lifecycle (freeze/close/reopen) with write rules, trip name/currency
 - [ ] M3 — schema + persistence (Drizzle)
 - [ ] M4 — identity
 - [ ] M5 — API (framework: to be decided — Hono or Fastify)

@@ -1,6 +1,12 @@
 {
-  "app": { "name": "Trip Ledger" },
-  "tabs": { "overview": "Übersicht", "ledger": "Buch", "settle": "Abrechnen" },
+  "app": {
+    "name": "Trip Ledger"
+  },
+  "tabs": {
+    "overview": "Übersicht",
+    "ledger": "Buch",
+    "settle": "Abrechnen"
+  },
   "overview": {
     "youOwe": "Du schuldest {{amount}}",
     "youGetBack": "Du bekommst {{amount}} zurück",
@@ -10,18 +16,34 @@
     "balances": "Salden",
     "recent": "Letzte Einträge",
     "empty": "Noch keine Ausgaben. Tippe auf +, um die erste einzutragen.",
-    "add": "Ausgabe hinzufügen"
+    "add": "Ausgabe hinzufügen",
+    "addPayment": "Zahlung erfassen"
   },
-  "person": { "owes": "schuldet {{amount}}", "getsBack": "bekommt {{amount}}", "settled": "quitt" },
+  "person": {
+    "owes": "schuldet {{amount}}",
+    "getsBack": "bekommt {{amount}}",
+    "settled": "quitt",
+    "paid": "Bezahlt",
+    "owed": "Schuldet (Kostenanteil)",
+    "balance": "Saldo",
+    "entries": "Einträge",
+    "share": "Anteil {{amount}}",
+    "paidAmount": "bezahlt {{amount}}",
+    "received": "erhalten {{amount}}",
+    "sent": "gesendet {{amount}}"
+  },
   "entry": {
     "new": "Neue Ausgabe",
-    "edit": "Ausgabe bearbeiten",
+    "edit": "Eintrag bearbeiten",
     "amount": "Betrag",
     "description": "Beschreibung",
     "descriptionPlaceholder": "z. B. Einkauf, Tanken, Abendessen",
     "paidBy": "Bezahlt von",
     "splitAmong": "Aufteilen auf",
-    "split": { "equal": "Gleich", "exact": "Genaue Beträge" },
+    "split": {
+      "equal": "Gleich",
+      "exact": "Genaue Beträge"
+    },
     "perPerson": "{{amount}} pro Person",
     "residual": "{{amount}} noch zu verteilen",
     "residualNegative": "{{amount}} über dem Gesamtbetrag",
@@ -30,17 +52,51 @@
     "delete": "Löschen",
     "cancel": "Abbrechen",
     "date": "Datum",
-    "type": { "expense": "Ausgabe", "transfer": "Zahlung", "adjustment": "Umbuchung" },
+    "type": {
+      "expense": "Ausgabe",
+      "transfer": "Zahlung",
+      "adjustment": "Umbuchung"
+    },
     "refund": "Erstattung / Geld zurück",
     "shares": "Anteile",
     "roundedNote": "Exakt gespeichert als {{exact}}; gerundet angezeigt.",
     "confirmDelete": "Diesen Eintrag löschen?",
-    "invalid": { "amount": "Betrag eingeben", "payer": "Wer hat bezahlt?", "split": "Mindestens eine Person wählen", "description": "Beschreibung eingeben" }
+    "invalid": {
+      "amount": "Betrag eingeben",
+      "payer": "Wer hat bezahlt?",
+      "split": "Mindestens eine Person wählen",
+      "description": "Beschreibung eingeben",
+      "date": "Datum als JJJJ-MM-TT eingeben",
+      "transfer": "Zwei verschiedene Personen wählen",
+      "payers": "Zahlerbeträge müssen den Gesamtbetrag ergeben"
+    },
+    "newPayment": "Neue Zahlung",
+    "from": "Von",
+    "to": "An",
+    "payers": "Bezahlt von (mehrere)",
+    "payerResidual": "{{amount}} des Betrags noch keinem Zahler zugeordnet",
+    "dateHint": "JJJJ-MM-TT",
+    "today": "Heute",
+    "restore": "Wiederherstellen",
+    "deletedBanner": "Dieser Eintrag ist gelöscht.",
+    "yourShare": "Dein Anteil",
+    "paymentDefault": "Zahlung"
   },
-  "ledger": { "empty": "Noch nichts erfasst.", "deleted": "gelöscht", "paidBy": "bezahlt von {{name}}", "transferTo": "{{from}} → {{to}}" },
+  "ledger": {
+    "empty": "Noch nichts erfasst.",
+    "deleted": "gelöscht",
+    "paidBy": "bezahlt von {{name}}",
+    "transferTo": "{{from}} → {{to}}",
+    "showDeleted": "Gelöschte anzeigen",
+    "hideDeleted": "Gelöschte ausblenden"
+  },
   "settle": {
     "title": "Abrechnen",
-    "plan": { "bilateral": "Direkt an Gläubiger", "optimal": "Wenigste Überweisungen", "hub": "Über {{name}}" },
+    "plan": {
+      "bilateral": "Direkt an Gläubiger",
+      "optimal": "Wenigste Überweisungen",
+      "hub": "Über {{name}}"
+    },
     "transfers_one": "{{count}} Überweisung",
     "transfers_other": "{{count}} Überweisungen",
     "minimal": "nachweislich minimal",
@@ -60,6 +116,36 @@
     "you": "du",
     "cannotRemove": "Hat Einträge; erst abrechnen."
   },
-  "settings": { "title": "Einstellungen", "resetSample": "Beispielreise laden", "clear": "Alle Daten löschen", "language": "Sprache" },
-  "common": { "ok": "OK", "yes": "Ja", "no": "Nein", "back": "Zurück" }
+  "settings": {
+    "title": "Einstellungen",
+    "resetSample": "Beispielreise laden",
+    "clear": "Alle Daten löschen",
+    "language": "Sprache"
+  },
+  "common": {
+    "ok": "OK",
+    "yes": "Ja",
+    "no": "Nein",
+    "back": "Zurück"
+  },
+  "trip": {
+    "name": "Reisename",
+    "currency": "Währung",
+    "currencyLocked": "Die Währung lässt sich nur bei leerem Buch ändern.",
+    "status": {
+      "open": "Offen",
+      "settling": "Abrechnung",
+      "closed": "Geschlossen"
+    },
+    "statusHint": {
+      "open": "Ausgaben und Zahlungen können erfasst werden.",
+      "settling": "Plan eingefroren: nur noch Zahlungen möglich. Schließen, sobald alle bei null sind.",
+      "closed": "Geschlossen und schreibgeschützt."
+    },
+    "freeze": "Plan einfrieren",
+    "reopen": "Wieder öffnen",
+    "close": "Reise schließen",
+    "closeBlocked": "Noch nicht alle Salden bei null.",
+    "readOnly": "Reise ist {{status}} — keine Änderungen möglich."
+  }
 }

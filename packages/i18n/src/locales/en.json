@@ -1,6 +1,12 @@
 {
-  "app": { "name": "Trip Ledger" },
-  "tabs": { "overview": "Overview", "ledger": "Ledger", "settle": "Settle up" },
+  "app": {
+    "name": "Trip Ledger"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "ledger": "Ledger",
+    "settle": "Settle up"
+  },
   "overview": {
     "youOwe": "You owe {{amount}}",
     "youGetBack": "You get back {{amount}}",
@@ -10,18 +16,34 @@
     "balances": "Balances",
     "recent": "Recent entries",
     "empty": "No expenses yet. Tap + to add the first one.",
-    "add": "Add expense"
+    "add": "Add expense",
+    "addPayment": "Record payment"
   },
-  "person": { "owes": "owes {{amount}}", "getsBack": "gets back {{amount}}", "settled": "settled" },
+  "person": {
+    "owes": "owes {{amount}}",
+    "getsBack": "gets back {{amount}}",
+    "settled": "settled",
+    "paid": "Paid",
+    "owed": "Owes (share of costs)",
+    "balance": "Balance",
+    "entries": "Entries",
+    "share": "share {{amount}}",
+    "paidAmount": "paid {{amount}}",
+    "received": "received {{amount}}",
+    "sent": "sent {{amount}}"
+  },
   "entry": {
     "new": "New expense",
-    "edit": "Edit expense",
+    "edit": "Edit entry",
     "amount": "Amount",
     "description": "Description",
     "descriptionPlaceholder": "e.g. Groceries, Fuel, Dinner",
     "paidBy": "Paid by",
     "splitAmong": "Split among",
-    "split": { "equal": "Equal", "exact": "Exact amounts" },
+    "split": {
+      "equal": "Equal",
+      "exact": "Exact amounts"
+    },
     "perPerson": "{{amount}} per person",
     "residual": "{{amount}} left to assign",
     "residualNegative": "{{amount}} over the total",
@@ -30,17 +52,51 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "date": "Date",
-    "type": { "expense": "Expense", "transfer": "Payment", "adjustment": "Adjustment" },
+    "type": {
+      "expense": "Expense",
+      "transfer": "Payment",
+      "adjustment": "Adjustment"
+    },
     "refund": "Refund / money back",
     "shares": "Shares",
     "roundedNote": "Stored exactly as {{exact}}; shown rounded.",
     "confirmDelete": "Delete this entry?",
-    "invalid": { "amount": "Enter an amount", "payer": "Pick who paid", "split": "Pick at least one person", "description": "Add a description" }
+    "invalid": {
+      "amount": "Enter an amount",
+      "payer": "Pick who paid",
+      "split": "Pick at least one person",
+      "description": "Add a description",
+      "date": "Enter a date as YYYY-MM-DD",
+      "transfer": "Pick two different people",
+      "payers": "Payer amounts must add up to the total"
+    },
+    "newPayment": "New payment",
+    "from": "From",
+    "to": "To",
+    "payers": "Paid by (several)",
+    "payerResidual": "{{amount}} of the total still unassigned to a payer",
+    "dateHint": "YYYY-MM-DD",
+    "today": "Today",
+    "restore": "Restore",
+    "deletedBanner": "This entry is deleted.",
+    "yourShare": "Your share",
+    "paymentDefault": "Payment"
   },
-  "ledger": { "empty": "Nothing recorded yet.", "deleted": "deleted", "paidBy": "paid by {{name}}", "transferTo": "{{from}} → {{to}}" },
+  "ledger": {
+    "empty": "Nothing recorded yet.",
+    "deleted": "deleted",
+    "paidBy": "paid by {{name}}",
+    "transferTo": "{{from}} → {{to}}",
+    "showDeleted": "Show deleted",
+    "hideDeleted": "Hide deleted"
+  },
   "settle": {
     "title": "Settle up",
-    "plan": { "bilateral": "Pay who you owe", "optimal": "Fewest transfers", "hub": "Via {{name}}" },
+    "plan": {
+      "bilateral": "Pay who you owe",
+      "optimal": "Fewest transfers",
+      "hub": "Via {{name}}"
+    },
     "transfers_one": "{{count}} transfer",
     "transfers_other": "{{count}} transfers",
     "minimal": "provably minimal",
@@ -60,6 +116,36 @@
     "you": "you",
     "cannotRemove": "Has entries; settle first."
   },
-  "settings": { "title": "Settings", "resetSample": "Load sample trip", "clear": "Clear all data", "language": "Language" },
-  "common": { "ok": "OK", "yes": "Yes", "no": "No", "back": "Back" }
+  "settings": {
+    "title": "Settings",
+    "resetSample": "Load sample trip",
+    "clear": "Clear all data",
+    "language": "Language"
+  },
+  "common": {
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back"
+  },
+  "trip": {
+    "name": "Trip name",
+    "currency": "Currency",
+    "currencyLocked": "Currency can only be changed while the ledger is empty.",
+    "status": {
+      "open": "Open",
+      "settling": "Settling up",
+      "closed": "Closed"
+    },
+    "statusHint": {
+      "open": "Expenses and payments can be recorded.",
+      "settling": "Plan frozen: only payments can be recorded. Close once everyone is at zero.",
+      "closed": "Closed and read-only."
+    },
+    "freeze": "Freeze plan",
+    "reopen": "Reopen",
+    "close": "Close trip",
+    "closeBlocked": "Balances are not all zero yet.",
+    "readOnly": "Trip is {{status}} — no changes possible."
+  }
 }

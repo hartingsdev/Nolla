@@ -1,16 +1,21 @@
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { FlatList, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatDate, formatMoney } from '../../src/format';
-import { useLiveEntries, useNames } from '../../src/selectors';
+import { useEntries, useLiveEntries, useNames } from '../../src/selectors';
 import { space, useTheme } from '../../src/theme';
-import { Amount, Body, Card, Row, Screen } from '../../src/components/ui';
+import { Amount, Body, Card, Chip, Row, Screen } from '../../src/components/ui';
 
 export default function Ledger() {
   const { t, i18n } = useTranslation();
   const th = useTheme();
   const router = useRouter();
-  const entries = useLiveEntries();
+  const live = useLiveEntries();
+  const all = useEntries();
+  const [showDeleted, setShowDeleted] = useState(false);
+  const deletedCount = all.filter((e) => e.deleted).length;
+  const entries = useMemo(() => (showDeleted ? [...all].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.createdAt < b.createdAt ? 1 : -1)) : live), [showDeleted, all, live]);
   const names = useNames();
   const locale = i18n.language;
   return (
@@ -20,12 +25,13 @@ export default function Ledger() {
         keyExtractor={(e) => e.id}
         contentContainerStyle={{ padding: space.lg, gap: space.sm }}
         ListEmptyComponent={<Body muted>{t('ledger.empty')}</Body>}
+        ListHeaderComponent={deletedCount > 0 ? <Row style={{ marginBottom: space.sm }}><Chip label={showDeleted ? t('ledger.hideDeleted') : `${t('ledger.showDeleted')} (${String(deletedCount)})`} selected={showDeleted} onPress={() => { setShowDeleted((v) => !v); }} /></Row> : null}
         renderItem={({ item: e }) => (
           <Pressable onPress={() => { router.push({ pathname: '/entry/[id]', params: { id: e.id } }); }}>
-            <Card style={{ paddingVertical: space.md }}>
+            <Card style={{ paddingVertical: space.md, opacity: e.deleted ? 0.5 : 1 }}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <View style={{ flex: 1 }}>
-                  <Body numberOfLines={1}>{e.description}</Body>
+                  <Body numberOfLines={1} style={{ textDecorationLine: e.deleted ? 'line-through' : 'none' }}>{e.description}{e.deleted ? ` · ${t('ledger.deleted')}` : ''}</Body>
                   <Body muted style={{ fontSize: 13 }}>
                     {formatDate(e.date, locale)} · {t(`entry.type.${e.type}`)} · {e.type === 'transfer'
                       ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })

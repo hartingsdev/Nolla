@@ -133,8 +133,12 @@ class TransferBook {
   }
 }
 
-/** Nearest Money to a single Precise (half away from zero). Only used for the pairwise view. */
-function nearestMoney(x: Precise): Money {
+/**
+ * Nearest Money to a single Precise (half away from zero). For DISPLAY of a lone
+ * value and the pairwise bilateral view only — never for a set that must sum to
+ * a total (use roundAll, P4).
+ */
+export function nearestMoney(x: Precise): Money {
   const f = 10n ** BigInt(8 - x.ccy.exponent);
   const q = x.scaled / f;
   const r = x.scaled - q * f;

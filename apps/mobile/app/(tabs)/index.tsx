@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { type ParticipantId, M, zeroMoney } from '@vst/domain';
 import { formatDate, formatMoney } from '../../src/format';
-import { useBalances, useCcy, useLiveEntries, useNames } from '../../src/selectors';
+import { useBalances, useCcy, useLiveEntries, useNames, useWriteRules } from '../../src/selectors';
 import { useStore } from '../../src/store';
 import { space, useTheme } from '../../src/theme';
 import { Amount, Body, Card, Chip, Divider, H1, H2, Row, Screen } from '../../src/components/ui';
@@ -18,6 +18,7 @@ export default function Overview() {
   const setMe = useStore((s) => s.setMe);
   const hydrated = useStore((s) => s.hydrated);
   const { shown, cost } = useBalances();
+  const rules = useWriteRules();
   const entries = useLiveEntries();
   const names = useNames();
   const locale = i18n.language;
@@ -32,6 +33,12 @@ export default function Overview() {
 
   return (
     <Screen>
+      {rules.status !== 'open' && (
+        <Card>
+          <H2>{t(`trip.status.${rules.status}`)}</H2>
+          <Body muted>{t(`trip.statusHint.${rules.status}`)}</Body>
+        </Card>
+      )}
       <Card>
         {participants.length === 0 ? (
           <Body muted>{t('overview.empty')}</Body>
@@ -62,13 +69,13 @@ export default function Overview() {
             const tone = b.minor < 0n ? 'negative' : b.minor > 0n ? 'positive' : 'neutral';
             const label = M.isZero(b) ? t('person.settled') : b.minor < 0n ? t('person.owes', { amount: formatMoney(M.abs(b), locale) }) : t('person.getsBack', { amount: formatMoney(b, locale) });
             return (
-              <View key={p.id}>
+              <Pressable key={p.id} onPress={() => { router.push({ pathname: '/person/[id]', params: { id: p.id } }); }} accessibilityRole="button">
                 {i > 0 && <Divider />}
                 <Row style={{ justifyContent: 'space-between' }}>
                   <Body>{p.name}{p.id === meId ? ` (${t('participants.you')})` : ''}</Body>
                   <Amount tone={tone}>{label}</Amount>
                 </Row>
-              </View>
+              </Pressable>
             );
           })}
         </Card>
@@ -97,10 +104,17 @@ export default function Overview() {
         ))}
       </Card>
 
-      <Pressable onPress={() => { router.push('/entry/new'); }} accessibilityRole="button" accessibilityLabel={t('overview.add')}
+      {rules.canWriteTransfer && participants.length > 0 && (
+        <Link href={{ pathname: '/entry/new', params: { kind: 'transfer' } }} asChild>
+          <Pressable accessibilityRole="button"><Body style={{ color: th.primary, textAlign: 'center' }}>{t('overview.addPayment')}</Body></Pressable>
+        </Link>
+      )}
+      {rules.canWriteTransfer && (
+      <Pressable onPress={() => { router.push(rules.canWriteExpense ? '/entry/new' : { pathname: '/entry/new', params: { kind: 'transfer' } }); }} accessibilityRole="button" accessibilityLabel={rules.canWriteExpense ? t('overview.add') : t('overview.addPayment')}
         style={({ pressed }) => ({ position: 'absolute', right: space.lg, bottom: space.lg, width: 60, height: 60, borderRadius: 30, backgroundColor: th.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1, elevation: 4 })}>
         <Text style={{ color: th.onPrimary, fontSize: 32, lineHeight: 36 }}>{'+'}</Text>
       </Pressable>
+      )}
     </Screen>
   );
 }
