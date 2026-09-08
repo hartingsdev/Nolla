@@ -30,10 +30,12 @@ export interface TripState {
   readonly conflicts: Record<string, WireEntry>;
   readonly lastSyncAt: number | null;
   readonly syncError: string | null;
+  /** Consecutive failed sync rounds, for backoff. Reset on success. */
+  readonly failedRounds: number;
 }
 
 export function emptyTrip(meta: TripMeta): TripState {
-  return { meta, participants: [], entries: [], meId: null, seq: '0', versions: {}, outbox: [], conflicts: {}, lastSyncAt: null, syncError: null };
+  return { meta, participants: [], entries: [], meId: null, seq: '0', versions: {}, outbox: [], conflicts: {}, lastSyncAt: null, syncError: null, failedRounds: 0 };
 }
 
 const entryOf = (op: OutboxOp): string | null => op.kind === 'create' || op.kind === 'update' ? op.entry.id : op.kind === 'addParticipant' ? null : op.entryId;
@@ -61,6 +63,13 @@ export function enqueue(outbox: readonly OutboxOp[], op: OutboxOp): OutboxOp[] {
 }
 
 export const hasPending = (state: TripState, entryId: string): boolean => state.outbox.some((o) => entryOf(o) === entryId);
+
+/** Entry ids with an unsent local write, for the "queued" badge in the UI. */
+export function pendingEntryIds(state: TripState): Set<string> {
+  const ids = new Set<string>();
+  for (const o of state.outbox) { const id = entryOf(o); if (id !== null) ids.add(id); }
+  return ids;
+}
 
 /** Merge a change-feed page. Entries with a pending local write keep the local version until it is pushed. */
 export function applyFeed(state: TripState, feed: Feed): TripState {

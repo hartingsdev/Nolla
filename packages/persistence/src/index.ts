@@ -7,3 +7,4 @@ export * from './repos/trips';
 export * from './repos/participants';
 export * from './repos/entries';
 export * from './repos/users';
+export * from './repos/attachments';

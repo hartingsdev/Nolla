@@ -222,6 +222,24 @@
     "conflict": "Jemand anderes hat diesen Eintrag geändert; deine Änderung wurde verworfen.",
     "conflictMine": "Deine Version:",
     "dismiss": "Ausblenden",
-    "now": "Jetzt synchronisieren"
+    "now": "Jetzt synchronisieren",
+    "pendingEntry": "wartet auf Sync",
+    "offline": "Offline — Änderungen sind auf diesem Gerät gespeichert",
+    "queued": "In Warteschlange"
+  },
+  "receipt": {
+    "title": "Belege",
+    "add": "Beleg hinzufügen",
+    "camera": "Foto aufnehmen",
+    "library": "Aus Galerie wählen",
+    "uploading": "Wird hochgeladen…",
+    "failed": "Upload fehlgeschlagen. Zum Wiederholen tippen.",
+    "delete": "Beleg entfernen",
+    "confirmDelete": "Diesen Beleg entfernen?",
+    "localOnly": "Belege brauchen eine geteilte Reise.",
+    "retention": "Belege werden {{days}} Tage nach Reiseende aufbewahrt.",
+    "count_one": "{{count}} Beleg",
+    "count_other": "{{count}} Belege",
+    "permission": "Für Belegfotos wird Kamerazugriff benötigt."
   }
 }

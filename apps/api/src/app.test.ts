@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type Hono } from 'hono';
 import { type ParticipantId, allocate, currency, entryToWire, localDate, money, toPrecise } from '@vst/domain';
-import { type Connection } from '@vst/persistence';
+import { type Connection, attachmentRepo } from '@vst/persistence';
 import { testConnection } from '@vst/persistence/testing';
 import { type AppDeps, createApp, createMetricsApp } from './app.ts';
 import { MemoryRateLimiter } from './identity/rate-limit.ts';
@@ -9,6 +9,7 @@ import { sessionService } from './identity/sessions.ts';
 import { type IdentityVerifier, IdentityError, type Provider, type VerifiedIdentity } from './identity/verifier.ts';
 import { promMetrics } from './metrics.ts';
 import { fixedClock } from './ports/clock.ts';
+import { LocalBlobStore } from './ports/blob.ts';
 import { RecordingNotifier } from './ports/notifier.ts';
 
 /** Tokens look like "google|sub|email" — the real verifier is covered in identity.test.ts. */
@@ -32,7 +33,7 @@ beforeAll(async () => {
   const verifier = new FakeVerifier();
   const limiter = new MemoryRateLimiter(100, 60_000, () => clock.nowMs());
   const deps: AppDeps = {
-    db: conn.db, sessions, verifier, notifier, clock, limiter, metrics, appBaseUrl: 'https://app.test',
+    db: conn.db, sessions, verifier, notifier, blobs: new LocalBlobStore('http://api.test', 'test-secret', () => clock.nowMs()), clock, limiter, metrics, appBaseUrl: 'https://app.test',
     signInDeps: () => ({ db: conn.db, verifier, sessions, notifier, clock, limiter, appBaseUrl: 'https://app.test', t: (_k, v) => v.url }),
   };
   app = createApp(deps);
@@ -252,5 +253,90 @@ describe('metrics', () => {
     expect(text).toMatch(/vst_write_conflicts_total/);
     expect(text).toMatch(/vst_trip_scope_denied_total \d+/);
     expect(text).toMatch(/vst_account_deletions_total 1/);
+  });
+});
+
+describe('receipts (FR-2.5)', () => {
+  it('presign, upload, confirm, list and delete — bytes never touch the ledger routes', async () => {
+    const { token } = await signIn('r1');
+    const { tripId, me } = await newTrip(token);
+    const w = expenseWire(2500n, me, [me]);
+    await call(`/trips/${tripId}/entries`, { ...json(w), token });
+
+    const id = crypto.randomUUID();
+    const res = await call(`/trips/${tripId}/entries/${w.id}/attachments`, { ...json({ id, mime: 'image/jpeg', bytes: 1024 }), token });
+    expect(res.status).toBe(201);
+    expect(res.body.upload.method).toBe('PUT');
+    expect(res.body.upload.url).toMatch(/\/blobs\/.*sig=/);
+
+    // the presigned PUT is served by the local store; a tampered signature is refused
+    const put = new URL(res.body.upload.url);
+    const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+    const bad = await app.request(`${put.pathname}${put.search.replace(/sig=[^&]+/, 'sig=forged')}`, { method: 'PUT', headers: { 'content-type': 'image/jpeg' }, body: bytes });
+    expect(bad.status).toBe(403);
+    const ok = await app.request(`${put.pathname}${put.search}`, { method: 'PUT', headers: { 'content-type': 'image/jpeg' }, body: bytes });
+    expect(ok.status).toBe(204);
+
+    expect((await call(`/trips/${tripId}/attachments/${id}/confirm`, { ...json({ bytes: bytes.length }), token })).status).toBe(200);
+
+    const list = await call(`/trips/${tripId}/entries/${w.id}/attachments`, { token });
+    expect(list.body.attachments).toHaveLength(1);
+    expect(list.body.attachments[0]).toMatchObject({ id, mime: 'image/jpeg', bytes: '5' });
+    const dl = new URL(list.body.attachments[0].url);
+    const got = await app.request(`${dl.pathname}${dl.search}`);
+    expect(got.status).toBe(200);
+    expect(new Uint8Array(await got.arrayBuffer())).toEqual(bytes);
+
+    // adding a receipt bumps the entry's seq so other phones refetch it
+    const feed = await call(`/trips/${tripId}/entries?since=0`, { token });
+    expect(feed.body.entries.map((e: { id: string }) => e.id)).toContain(w.id);
+
+    expect((await call(`/trips/${tripId}/attachments/${id}`, { method: 'DELETE', token })).status).toBe(204);
+    expect((await call(`/trips/${tripId}/entries/${w.id}/attachments`, { token })).body.attachments).toHaveLength(0);
+  });
+
+  it('rejects an unsupported type, an oversized file and another trip\'s entry', async () => {
+    const { token } = await signIn('r2');
+    const { tripId, me } = await newTrip(token);
+    const w = expenseWire(100n, me, [me]);
+    await call(`/trips/${tripId}/entries`, { ...json(w), token });
+    expect((await call(`/trips/${tripId}/entries/${w.id}/attachments`, { ...json({ id: crypto.randomUUID(), mime: 'application/zip', bytes: 10 }), token })).status).toBe(400);
+    expect((await call(`/trips/${tripId}/entries/${w.id}/attachments`, { ...json({ id: crypto.randomUUID(), mime: 'image/jpeg', bytes: 50 * 1024 * 1024 }), token })).status).toBe(400);
+    const other = await newTrip(token, 'other');
+    expect((await call(`/trips/${other.tripId}/entries/${w.id}/attachments`, { ...json({ id: crypto.randomUUID(), mime: 'image/jpeg', bytes: 10 }), token })).status).toBe(404);
+  });
+
+  it('reports the trip\'s effective retention and usage (D11)', async () => {
+    const { token } = await signIn('r3');
+    const { tripId } = await newTrip(token);
+    const r = await call(`/trips/${tripId}/attachments/retention`, { token });
+    expect(r.body.retentionDays).toBe(365);
+    expect(r.body.usage).toEqual({ count: '0', bytes: '0' });
+  });
+});
+
+describe('retention (FR-12.6, D11)', () => {
+  it('finds receipts past their trip retention and abandoned uploads, and leaves fresh ones alone', async () => {
+    const { token } = await signIn('r4');
+    const { tripId, me } = await newTrip(token);
+    const w = expenseWire(100n, me, [me]);
+    await call(`/trips/${tripId}/entries`, { ...json(w), token });
+    const fresh = crypto.randomUUID();
+    await call(`/trips/${tripId}/entries/${w.id}/attachments`, { ...json({ id: fresh, mime: 'image/jpeg', bytes: 10 }), token });
+    await call(`/trips/${tripId}/attachments/${fresh}/confirm`, { ...json({ bytes: 10 }), token });
+
+    // nothing is expired yet, and the just-created upload is not yet abandoned
+    expect(await attachmentRepo.expired(conn.db, new Date())).toEqual([]);
+    expect(await attachmentRepo.unconfirmedOlderThan(conn.db, new Date(Date.now() - 24 * 3600 * 1000))).toEqual([]);
+
+    // 400 days on, past the 365-day default, the receipt is due for purging
+    const expired = await attachmentRepo.expired(conn.db, new Date(Date.now() + 400 * 24 * 3600 * 1000));
+    expect(expired.map((a) => a.id)).toContain(fresh);
+
+    // an upload that never confirmed is reaped on its own clock
+    const dangling = crypto.randomUUID();
+    await call(`/trips/${tripId}/entries/${w.id}/attachments`, { ...json({ id: dangling, mime: 'image/png', bytes: 10 }), token });
+    const abandoned = await attachmentRepo.unconfirmedOlderThan(conn.db, new Date(Date.now() + 48 * 3600 * 1000));
+    expect(abandoned.map((a) => a.id)).toEqual([dangling]);
   });
 });

@@ -467,6 +467,16 @@ stays stateless. The receipt purge job (FR-12.6, v0.2) uses the same mechanism.
   and the device locale.
 - **Auth storage:** session token in `expo-secure-store` (Keychain / Keystore);
   on web, an HttpOnly cookie set by the API instead.
+- **Receipts:** the client asks the API for a presigned PUT, uploads the bytes
+  straight to storage and confirms the size; a row with `bytes = 0` is an
+  unconfirmed upload that the retention job reaps after a day. With `S3_BUCKET`
+  set the bytes go to any S3-compatible bucket; without it the API signs and
+  serves them itself, which is enough for a single instance and is what makes
+  the whole flow testable without object storage.
+- **Offline writes:** entries with an unsent write show a queued badge, the
+  overview says "offline" rather than showing a transport error, and failed
+  sync rounds back off from 10 s to 5 min (`backoffMs`) so a dead network costs
+  one request every few minutes.
 - **Builds:** EAS Build with `development`, `preview`
   (TestFlight / internal testing) and `production` profiles; EAS Update for
   over-the-air JS fixes on the preview channel during the trip (mitigates the

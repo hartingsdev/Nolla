@@ -4,7 +4,7 @@ import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { categoryIcon } from '../../src/categories';
 import { formatDate, formatMoney } from '../../src/format';
-import { useEntries, useLiveEntries, useNames, useParticipants } from '../../src/selectors';
+import { useEntries, useLiveEntries, useNames, useParticipants, usePendingEntryIds } from '../../src/selectors';
 import { space, useTheme } from '../../src/theme';
 import { Amount, Body, Card, Chip, Row, Screen } from '../../src/components/ui';
 
@@ -23,6 +23,7 @@ export default function Ledger() {
   const [person, setPerson] = useState<string | null>(null);
   const deletedCount = all.filter((e) => e.deleted).length;
   const names = useNames();
+  const pending = usePendingEntryIds();
   const locale = i18n.language;
 
   const entries = useMemo(() => {
@@ -67,7 +68,7 @@ export default function Ledger() {
                 <View style={{ flex: 1 }}>
                   <Body numberOfLines={1} style={{ textDecorationLine: e.deleted ? 'line-through' : 'none' }}>{categoryIcon(e.category, e.type)} {e.description}{e.deleted ? ` · ${t('ledger.deleted')}` : ''}</Body>
                   <Body muted style={{ fontSize: 13 }}>
-                    {formatDate(e.date, locale)} · {t(`entry.type.${e.type}`)} · {e.type === 'transfer'
+                    {pending.has(e.id) ? `${t('sync.queued')} · ` : ''}{formatDate(e.date, locale)} · {t(`entry.type.${e.type}`)} · {e.type === 'transfer'
                       ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })
                       : t('ledger.paidBy', { name: e.payments.map((p) => names.get(p.participantId) ?? '?').join(', ') })}
                   </Body>

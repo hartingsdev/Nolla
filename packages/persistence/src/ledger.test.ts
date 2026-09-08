@@ -15,16 +15,24 @@ import { testConnection } from './testing/harness';
 
 const EUR = currency('EUR');
 let conn: Connection;
-
-/** Drizzle wraps driver errors ("Failed query: …") with the Postgres error as `cause`. */
-async function expectDbError(p: Promise<unknown>, re: RegExp): Promise<void> {
-  await expect(p).rejects.toSatisfy((e: unknown) => {
-    const err = e as { message?: string; cause?: { message?: string } };
-    return re.test(err.message ?? '') || re.test(err.cause?.message ?? '');
-  });
-}
 beforeAll(async () => { conn = await testConnection(); });
 afterAll(async () => { await conn.close(); });
+
+/**
+ * Drizzle wraps driver errors as "Failed query: …" and puts the Postgres error on `cause`.
+ * A DEFERRED constraint trigger fires at COMMIT, so on real Postgres the message only ever
+ * appears down the cause chain; PGlite surfaces it directly. Walk the whole chain.
+ */
+async function expectDbError(p: Promise<unknown>, re: RegExp): Promise<void> {
+  await expect(p).rejects.toSatisfy((e: unknown) => {
+    for (let cur: unknown = e, depth = 0; cur && depth < 10; depth++) {
+      const err = cur as { message?: unknown; cause?: unknown };
+      if (typeof err.message === 'string' && re.test(err.message)) return true;
+      cur = err.cause;
+    }
+    return false;
+  });
+}
 
 interface Fixture { userId: string; tripId: string; pids: string[] }
 async function fixture(n = 5): Promise<Fixture> {
@@ -71,27 +79,27 @@ describe('entries', () => {
 
   it('rejects an entry whose shares do not sum to the amount — at the database, even bypassing the repo', async () => {
     const id = randomUUID();
-    await expect(conn.db.transaction(async (tx) => {
+    await expectDbError(conn.db.transaction(async (tx) => {
       await tx.insert(entries).values({ id, tripId: f.tripId, type: 'expense', description: 'bad', amountMinor: 1000n, ccy: 'EUR', ccyExponent: 2, date: '2026-03-02', seq: 1n });
       await tx.insert(payments).values({ entryId: id, tripId: f.tripId, participantId: f.pids[0]!, amountMinor: 1000n });
       await tx.insert(shares).values([
         { entryId: id, tripId: f.tripId, participantId: f.pids[0]!, amount: '5.00000000' },
         { entryId: id, tripId: f.tripId, participantId: f.pids[1]!, amount: '4.99000000' },
       ]);
-    })).rejects.toThrow(/I1: entry .* shares sum/);
+    }), /I1: entry .* shares sum/);
     expect(await entryRepo.list(conn.db, f.tripId)).toHaveLength(0);
   });
 
   it('rejects payments that do not sum to the amount, and an entry without shares', async () => {
     const id = randomUUID();
-    await expect(conn.db.transaction(async (tx) => {
+    await expectDbError(conn.db.transaction(async (tx) => {
       await tx.insert(entries).values({ id, tripId: f.tripId, type: 'expense', description: 'bad', amountMinor: 1000n, ccy: 'EUR', ccyExponent: 2, date: '2026-03-02', seq: 1n });
       await tx.insert(payments).values({ entryId: id, tripId: f.tripId, participantId: f.pids[0]!, amountMinor: 999n });
       await tx.insert(shares).values({ entryId: id, tripId: f.tripId, participantId: f.pids[0]!, amount: '10.00000000' });
-    })).rejects.toThrow(/I1: entry .* payments sum/);
-    await expect(conn.db.transaction(async (tx) => {
+    }), /I1: entry .* payments sum/);
+    await expectDbError(conn.db.transaction(async (tx) => {
       await tx.insert(entries).values({ id: randomUUID(), tripId: f.tripId, type: 'expense', description: 'bad', amountMinor: 0n, ccy: 'EUR', ccyExponent: 2, date: '2026-03-02', seq: 1n });
-    })).rejects.toThrow(/at least one payment and one share/);
+    }), /at least one payment and one share/);
   });
 
   it('optimistic update: stale version conflicts and returns the current row', async () => {

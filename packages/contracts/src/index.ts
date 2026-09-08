@@ -63,3 +63,7 @@ export const settlementQuery = z.object({ plan: planKind.default('optimal'), hub
 export const changesQuery = z.object({ since: z.string().regex(/^\d+$/).default('0'), limit: z.coerce.number().int().min(1).max(1000).default(500) });
 
 export const settleShare = z.object({ participantId: uuid, transferEntryId: uuid.nullable() });
+
+export const RECEIPT_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'] as const;
+export const RECEIPT_MAX_BYTES = 8 * 1024 * 1024;
+export const createAttachment = z.object({ id: uuid, mime: z.enum(RECEIPT_MIMES), bytes: z.number().int().positive().max(RECEIPT_MAX_BYTES) });

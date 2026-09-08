@@ -14,6 +14,7 @@ import { sessionService } from '../src/identity/sessions.ts';
 import { type IdentityVerifier, IdentityError, type Provider, type VerifiedIdentity } from '../src/identity/verifier.ts';
 import { promMetrics } from '../src/metrics.ts';
 import { systemClock } from '../src/ports/clock.ts';
+import { LocalBlobStore } from '../src/ports/blob.ts';
 import { RecordingNotifier } from '../src/ports/notifier.ts';
 
 /** Dev verifier: a "token" of the form `google|subject|email` is accepted as-is. Never used in production builds. */
@@ -35,8 +36,10 @@ const limiter = new MemoryRateLimiter(1000, 60_000);
 const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:8081';
 const corsOrigins = (process.env.CORS_ORIGINS ?? `${appBaseUrl},http://localhost:8787,http://localhost:19006`).split(',');
 
+const blobs = new LocalBlobStore(`http://localhost:${String(process.env.PORT ?? 8080)}`, 'dev-blob-secret');
+
 const app = createApp({
-  db: conn.db, sessions, verifier, notifier, clock, limiter, metrics, appBaseUrl, corsOrigins,
+  db: conn.db, sessions, verifier, notifier, blobs, clock, limiter, metrics, appBaseUrl, corsOrigins,
   signInDeps: () => ({ db: conn.db, verifier, sessions, notifier, clock, limiter, appBaseUrl, t: (k, v) => (k === 'magicLink.subject' ? 'Sign in' : v.url) }),
 });
 app.get('/dev/magic-links', (c) => c.json({ links: notifier.emails.map((e) => ({ to: e.to, url: e.text })) }));

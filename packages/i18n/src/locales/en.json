@@ -222,6 +222,24 @@
     "conflict": "Someone else changed this entry; your edit was not applied.",
     "conflictMine": "Your version:",
     "dismiss": "Dismiss",
-    "now": "Sync now"
+    "now": "Sync now",
+    "pendingEntry": "waiting to sync",
+    "offline": "Offline — changes are saved on this device",
+    "queued": "Queued"
+  },
+  "receipt": {
+    "title": "Receipts",
+    "add": "Add receipt",
+    "camera": "Take a photo",
+    "library": "Choose from library",
+    "uploading": "Uploading…",
+    "failed": "Upload failed. Tap to retry.",
+    "delete": "Remove receipt",
+    "confirmDelete": "Remove this receipt?",
+    "localOnly": "Receipts need a shared trip.",
+    "retention": "Receipts are kept for {{days}} days after the trip closes.",
+    "count_one": "{{count}} receipt",
+    "count_other": "{{count}} receipts",
+    "permission": "Camera access is needed to photograph a receipt."
   }
 }

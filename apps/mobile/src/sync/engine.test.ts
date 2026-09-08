@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type ParticipantId, type WireEntry, allocate, currency, entryToWire, localDate, money } from '@vst/domain';
 import { ApiError, type EntryRecord, type Feed, NetworkError } from '../api/types';
-import { type SyncApi, type SyncStore, syncTrip } from './engine';
+import { type SyncApi, type SyncStore, backoffMs, syncTrip } from './engine';
 import { type TripState, applyFeed, emptyTrip, enqueue } from './merge';
 
 const EUR = currency('EUR');
@@ -130,5 +130,48 @@ describe('syncTrip', () => {
     api.pull = async () => { throw new ApiError(401, 'UNAUTHORIZED', 'sign in required'); };
     const store = new MemStore(emptyTrip(meta));
     expect(await syncTrip('trip', api, store)).toMatchObject({ ok: false, error: 'auth' });
+  });
+});
+
+describe('offline behaviour', () => {
+  it('counts failed rounds for backoff and clears them on the next success', async () => {
+    const api = new FakeApi(); api.offline = true;
+    const a = wire(uuid(1), 100n);
+    const store = new MemStore({ ...emptyTrip(meta), entries: [a], outbox: [{ opId: '1', kind: 'create', entry: a }] });
+    await syncTrip('trip', api, store);
+    await syncTrip('trip', api, store);
+    expect(store.state.failedRounds).toBe(2);
+    api.offline = false;
+    await syncTrip('trip', api, store);
+    expect(store.state.failedRounds).toBe(0);
+    expect(store.state.syncError).toBeNull();
+  });
+
+  it('backs off geometrically and caps at five minutes', () => {
+    expect(backoffMs(0)).toBe(10_000);
+    expect(backoffMs(1)).toBe(20_000);
+    expect(backoffMs(3)).toBe(80_000);
+    expect(backoffMs(9)).toBe(300_000);
+  });
+
+  it('a whole offline session of edits replays in order when the network returns', async () => {
+    const api = new FakeApi();
+    const a = wire(uuid(1), 100n, 'lunch');
+    const store = new MemStore(emptyTrip(meta));
+    api.offline = true;
+    // three writes with no network: create, edit, and a second entry
+    store.set('trip', (s) => ({ ...s, entries: [a], outbox: enqueue(s.outbox, { opId: '1', kind: 'create', entry: a }) }));
+    await syncTrip('trip', api, store);
+    const edited = { ...a, description: 'lunch (split)' };
+    store.set('trip', (s) => ({ ...s, entries: [edited], outbox: enqueue(s.outbox, { opId: '2', kind: 'update', entry: edited }) }));
+    const b = wire(uuid(2), 250n, 'taxi');
+    store.set('trip', (s) => ({ ...s, entries: [edited, b], outbox: enqueue(s.outbox, { opId: '3', kind: 'create', entry: b }) }));
+    expect(store.state.outbox).toHaveLength(2); // the edit folded into the pending create
+    api.offline = false;
+    const r = await syncTrip('trip', api, store);
+    expect(r).toMatchObject({ ok: true, pushed: 2 });
+    expect(api.rows.get(a.id)?.description).toBe('lunch (split)');
+    expect(api.rows.get(b.id)?.description).toBe('taxi');
+    expect(store.state.outbox).toEqual([]);
   });
 });

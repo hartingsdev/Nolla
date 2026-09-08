@@ -18,6 +18,13 @@ export interface SyncStore {
   set(tripId: string, update: (s: TripState) => TripState): void;
 }
 
+export const POLL_MS = 10_000;
+
+/** Backoff after consecutive failures: 10s, 20s, 40s, 80s, capped at 5 min (architecture.md A5). */
+export function backoffMs(failedRounds: number): number {
+  return Math.min(POLL_MS * 2 ** Math.min(failedRounds, 5), 300_000);
+}
+
 export type SyncOutcome = { ok: true; pushed: number; pulled: number } | { ok: false; error: 'network' | 'auth' | 'other'; message: string };
 
 /**
@@ -60,7 +67,7 @@ export async function syncTrip(tripId: string, api: SyncApi, store: SyncStore, n
     store.set(tripId, (s) => applyFeed(s, feed));
     if (!feed.more) break;
   }
-  store.set(tripId, (s) => ({ ...s, lastSyncAt: now(), syncError: null }));
+  store.set(tripId, (s) => ({ ...s, lastSyncAt: now(), syncError: null, failedRounds: 0 }));
   return { ok: true, pushed, pulled };
 }
 
@@ -77,6 +84,6 @@ async function pushOne(tripId: string, op: OutboxOp, state: TripState, api: Sync
 }
 
 function fail(store: SyncStore, tripId: string, error: 'network' | 'auth' | 'other', message: string): SyncOutcome {
-  store.set(tripId, (s) => ({ ...s, syncError: message }));
+  store.set(tripId, (s) => ({ ...s, syncError: message, failedRounds: s.failedRounds + 1 }));
   return { ok: false, error, message };
 }

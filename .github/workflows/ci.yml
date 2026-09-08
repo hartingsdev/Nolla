@@ -53,6 +53,10 @@ jobs:
       - run: pnpm --filter @vst/persistence migrate && pnpm --filter @vst/persistence check-invariants
         env:
           DATABASE_URL: postgres://vst:vst@localhost:5432/vst
+      - name: Receipt retention job runs clean on an empty database
+        run: pnpm --filter @vst/api retention --dry-run
+        env:
+          DATABASE_URL: postgres://vst:vst@localhost:5432/vst
       - name: Boot the bundled API against Postgres and probe health + metrics
         run: |
           pnpm --filter @vst/api build

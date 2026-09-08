@@ -57,6 +57,21 @@ export class ApiClient {
   updateEntry(tripId: string, entry: WireEntry, ifMatch: number) { return this.request<EntryRecord>('PATCH', `/trips/${tripId}/entries/${entry.id}`, { body: entry, ifMatch }); }
   setDeleted(tripId: string, id: string, ifMatch: number, deleted: boolean) { return this.request<EntryRecord>(deleted ? 'DELETE' : 'POST', `/trips/${tripId}/entries/${id}${deleted ? '' : '/restore'}`, { ifMatch }); }
   settleShare(tripId: string, entryId: string, participantId: string, transferEntryId: string | null) { return this.request<null>('POST', `/trips/${tripId}/entries/${entryId}/settle-share`, { body: { participantId, transferEntryId } }); }
+  // receipts
+  presignAttachment(tripId: string, entryId: string, a: { id: string; mime: string; bytes: number }) { return this.request<{ id: string; upload: { url: string; method: 'PUT'; headers: Record<string, string> }; expiresIn: number }>('POST', `/trips/${tripId}/entries/${entryId}/attachments`, { body: a }); }
+  confirmAttachment(tripId: string, id: string, bytes: number) { return this.request<{ id: string }>('POST', `/trips/${tripId}/attachments/${id}/confirm`, { body: { bytes } }); }
+  listAttachments(tripId: string, entryId: string) { return this.request<{ attachments: { id: string; mime: string; bytes: string; uploadedAt: string; url: string }[]; expiresIn: number }>('GET', `/trips/${tripId}/entries/${entryId}/attachments`); }
+  deleteAttachment(tripId: string, id: string) { return this.request<null>('DELETE', `/trips/${tripId}/attachments/${id}`); }
+  retention(tripId: string) { return this.request<{ retentionDays: number; usage: { count: string; bytes: string } }>('GET', `/trips/${tripId}/attachments/retention`); }
+
+  /** Uploads bytes straight to the presigned URL: they never pass through the API process. */
+  async uploadBlob(url: string, headers: Record<string, string>, body: Blob): Promise<void> {
+    let res: Response;
+    try { res = await fetch(url, { method: 'PUT', headers, body }); }
+    catch (e) { throw new NetworkError(e instanceof Error ? e.message : String(e)); }
+    if (!res.ok) throw new ApiError(res.status, 'UPLOAD_FAILED', `upload failed (${String(res.status)})`);
+  }
+
   devMagicLinks() { return this.request<{ links: { to: string; url: string }[] }>('GET', '/dev/magic-links'); }
 }
 

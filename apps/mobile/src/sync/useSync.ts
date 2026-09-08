@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { ApiClient } from '../api/client';
 import { useStore } from '../store';
-import { type SyncOutcome, syncTrip } from './engine';
+import { type SyncOutcome, backoffMs, syncTrip } from './engine';
 
-export const POLL_MS = 10_000;
+
 
 /** Lets any screen ask the app-level sync loop for a round now (the "Sync now" button). */
 let requester: (() => Promise<SyncOutcome | null>) | null = null;
@@ -32,6 +32,7 @@ export function useSync(): { syncNow: () => Promise<SyncOutcome | null>; syncing
   const tripId = useStore((s) => s.activeTripId);
   const remote = useStore((s) => s.trips[s.activeTripId]?.meta.remote ?? false);
   const outboxLen = useStore((s) => s.trips[s.activeTripId]?.outbox.length ?? 0);
+  const failedRounds = useStore((s) => s.trips[s.activeTripId]?.failedRounds ?? 0);
   const authed = useStore((s) => s.auth !== null);
   const setAuth = useStore((s) => s.setAuth);
   const [syncing, setSyncing] = useState(false);
@@ -52,10 +53,20 @@ export function useSync(): { syncNow: () => Promise<SyncOutcome | null>; syncing
   useEffect(() => { void syncNow(); }, [syncNow, outboxLen]);
   useEffect(() => {
     if (!remote || !authed) return;
-    const id = setInterval(() => { if (AppState.currentState === 'active') void syncNow(); }, POLL_MS);
+    // Poll on the normal cadence, or backed off while the last rounds failed, so a dead
+    // network costs one request every few minutes instead of one every ten seconds.
+    const id = setInterval(() => { if (AppState.currentState === 'active') void syncNow(); }, backoffMs(failedRounds));
     const sub = AppState.addEventListener('change', (s) => { if (s === 'active') void syncNow(); });
     return () => { clearInterval(id); sub.remove(); };
-  }, [syncNow, remote, authed]);
+  }, [syncNow, remote, authed, failedRounds]);
+
+  // The browser tells us when it is back; native falls back to the poll above.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof globalThis.addEventListener !== 'function') return;
+    const onOnline = () => { void syncNow(); };
+    globalThis.addEventListener('online', onOnline);
+    return () => { globalThis.removeEventListener('online', onOnline); };
+  }, [syncNow]);
 
   return { syncNow, syncing };
 }

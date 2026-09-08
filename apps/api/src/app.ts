@@ -7,10 +7,12 @@ import { type SessionService } from './identity/sessions.ts';
 import { type SignInDeps } from './identity/signin.ts';
 import { type IdentityVerifier } from './identity/verifier.ts';
 import { type Metrics } from './metrics.ts';
+import { type BlobStore } from './ports/blob.ts';
 import { type Notifier } from './ports/notifier.ts';
 import { authRoutes } from './http/auth-routes.ts';
 import { onError } from './http/errors.ts';
 import { metricsMiddleware, requestId } from './http/middleware.ts';
+import { attachmentRoutes } from './http/attachment-routes.ts';
 import { tripRoutes } from './http/trip-routes.ts';
 
 export interface AppDeps {
@@ -18,6 +20,7 @@ export interface AppDeps {
   readonly sessions: SessionService;
   readonly verifier: IdentityVerifier;
   readonly notifier: Notifier;
+  readonly blobs: BlobStore;
   readonly clock: Clock;
   readonly limiter: RateLimiter;
   readonly metrics: Metrics;
@@ -36,6 +39,7 @@ export function createApp(deps: AppDeps): Hono {
   app.get('/health', (c) => c.json({ ok: true }));
   app.route('/', authRoutes(deps));
   app.route('/', tripRoutes(deps));
+  app.route('/', attachmentRoutes(deps));
   app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'not found' } }, 404));
   return app;
 }

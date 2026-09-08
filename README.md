@@ -41,6 +41,7 @@ pnpm --filter @vst/mobile e2e         # UI click tests: exports the web build (A
 pnpm --filter @vst/persistence test   # ledger schema tests on PGlite (in-process Postgres); set DATABASE_URL to use a real one
 pnpm --filter @vst/persistence migrate           # apply migrations/*.sql to DATABASE_URL
 pnpm --filter @vst/persistence check-invariants  # the nightly correctness job; exit 1 on any violation
+pnpm --filter @vst/api retention                 # the receipt purge job (--dry-run to preview)
 pnpm --filter @vst/api dev:pglite                # the API on :8080 with an in-process Postgres — no Docker, no DATABASE_URL
 pnpm --filter @vst/api dev                       # the API on :8080 (+ metrics on :9464) via tsx, needs DATABASE_URL
 pnpm --filter @vst/api build                     # esbuild → apps/api/dist/main.mjs, what the Dockerfile ships
@@ -71,4 +72,5 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] M4 — identity: OIDC verification (Apple/Google), magic links, sessions, deletion
 - [x] M5 — Hono API: trips, invites, participants, ledger + change feed, balances, settlement, lifecycle, metrics
 - [x] M6 — shared trips in the app: sign-in (magic link), invites, claiming, sync engine with outbox + change feed, conflict notices
-- [ ] M7–M11 — offline write polish, receipts, distribution (TestFlight / internal testing), the trip
+- [x] M9 — receipts (presigned uploads, retention job) and offline-write polish (queued badges, backoff, replay)
+- [ ] M10–M11 — distribution (needs Apple/Google developer accounts), the trip

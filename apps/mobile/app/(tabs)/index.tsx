@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { type ParticipantId, M, zeroMoney } from '@vst/domain';
 import { categoryIcon } from '../../src/categories';
 import { formatDate, formatMoney } from '../../src/format';
-import { useBalances, useCcy, useLiveEntries, useMeId, useNames, useParticipants, useTrip, useWriteRules } from '../../src/selectors';
+import { useBalances, useCcy, useLiveEntries, useMeId, useNames, useOffline, useParticipants, useTrip, useWriteRules } from '../../src/selectors';
 import { requestSync, useSyncing } from '../../src/sync/useSync';
 import { useStore } from '../../src/store';
 import { space, useTheme } from '../../src/theme';
@@ -20,6 +20,7 @@ export default function Overview() {
   const setMe = useStore((s) => s.setMe);
   const trip = useTrip();
   const syncing = useSyncing();
+  const offline = useOffline();
   const dismissConflict = useStore((s) => s.dismissConflict);
   const hydrated = useStore((s) => s.hydrated);
   const { shown, cost } = useBalances();
@@ -42,7 +43,8 @@ export default function Overview() {
         <Card style={{ paddingVertical: space.sm }}>
           <Row style={{ justifyContent: 'space-between' }}>
             <Body muted style={{ fontSize: 13, flex: 1 }}>
-              {trip.syncError ? t('sync.error', { message: trip.syncError })
+              {offline ? t('sync.offline')
+                : trip.syncError ? t('sync.error', { message: trip.syncError })
                 : trip.outbox.length > 0 ? t('sync.pending', { count: trip.outbox.length })
                 : trip.lastSyncAt ? t('sync.synced') : t('sync.never')}
             </Body>

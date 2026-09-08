@@ -10,9 +10,12 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.mjs",
     "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/main.mjs --external:pg-native --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
-    "dev:pglite": "tsx scripts/dev-pglite.ts"
+    "dev:pglite": "tsx scripts/dev-pglite.ts",
+    "retention": "tsx scripts/retention.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1127.0",
+    "@aws-sdk/s3-request-presigner": "^3.1127.0",
     "@hono/node-server": "^2.1.1",
     "@hono/zod-validator": "^0.9.1",
     "@vst/contracts": "workspace:*",

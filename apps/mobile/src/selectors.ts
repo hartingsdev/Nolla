@@ -3,6 +3,7 @@ import {
   type Entry, type ParticipantId, type PlanOptions, balances, currency, entryFromWire, grossMatrix,
   roundAll, settle, tripCost, zeroMoney, type Money, type Precise,
 } from '@vst/domain';
+import { pendingEntryIds } from './sync/merge';
 import { type TripState, useStore } from './store';
 
 export function useTrip(): TripState {
@@ -74,4 +75,18 @@ export function useWriteRules() {
 export function useAllSettled(): boolean {
   const { shown } = useBalances();
   return [...shown.values()].every((m) => m.minor === 0n);
+}
+
+/** Entry ids with an unsent local write, for the "queued" badge (FR-11.3). */
+export function usePendingEntryIds(): Set<string> {
+  const outbox = useStore((s) => s.trips[s.activeTripId]?.outbox);
+  return useMemo(() => pendingEntryIds({ outbox: outbox ?? [] } as unknown as TripState), [outbox]);
+}
+
+/** True when the last sync round failed on the network, so writes are piling up locally. */
+export function useOffline(): boolean {
+  return useStore((s) => {
+    const t = s.trips[s.activeTripId];
+    return !!t?.meta.remote && t.failedRounds > 0 && t.outbox.length > 0;
+  });
 }
