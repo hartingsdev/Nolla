@@ -18,6 +18,11 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm check:no-floats
+      - name: Validate Prometheus rules and Grafana dashboards
+        run: |
+          docker run --rm -v "$PWD/ops/prometheus:/p:ro" --entrypoint promtool prom/prometheus:v3.5.0 check rules /p/alerts.yml
+          docker run --rm -v "$PWD/ops/prometheus:/p:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /p/prometheus.yml
+          for f in ops/grafana/dashboards/*.json; do jq -e .uid "$f" > /dev/null; done
       - run: pnpm --filter @vst/mobile export:web
         env:
           CI: 1

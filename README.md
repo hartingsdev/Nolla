@@ -58,6 +58,8 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] M2 — ledger, balances, gross matrix, three settlement plans, lifecycle, entitlements
 - [x] UI (pulled forward) — Expo app shell: overview, ledger, settle up, add expense, entry detail, participants, settings; local-only store; EN + DE
 - [x] UI batch 2 — edit entries, date, multiple payers, direct payments, delete/restore, per-person drill-down, trip lifecycle (freeze/close/reopen) with write rules, trip name/currency
+- [x] UI batch 3 — categories, per-share "mark paid" (FR-7.4), who-owes-whom matrix, "same again", ledger search and filters
+- [x] Observability plan — [docs/observability.md](docs/observability.md); Prometheus/Grafana/Alertmanager stack and rules in `ops/`, `docker-compose.observability.yml`
 - [ ] M3 — schema + persistence (Drizzle)
 - [ ] M4 — identity
 - [ ] M5 — API (framework: to be decided — Hono or Fastify)

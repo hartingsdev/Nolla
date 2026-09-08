@@ -2,6 +2,7 @@ import { Link, useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { type ParticipantId, M, zeroMoney } from '@vst/domain';
+import { categoryIcon } from '../../src/categories';
 import { formatDate, formatMoney } from '../../src/format';
 import { useBalances, useCcy, useLiveEntries, useNames, useWriteRules } from '../../src/selectors';
 import { useStore } from '../../src/store';
@@ -91,7 +92,7 @@ export default function Overview() {
             {i > 0 && <Divider />}
             <Row style={{ justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
-                <Body numberOfLines={1}>{e.description}</Body>
+                <Body numberOfLines={1}>{categoryIcon(e.category, e.type)} {e.description}</Body>
                 <Body muted style={{ fontSize: 13 }}>
                   {formatDate(e.date, locale)} · {e.type === 'transfer'
                     ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })

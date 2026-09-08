@@ -10,11 +10,14 @@ import { useCcy } from '../selectors';
 import { useStore } from '../store';
 import { space, useTheme } from '../theme';
 import { Body, Button, Card, Chip, H2, Row, Screen } from './ui';
+import { CATEGORIES, CATEGORY_ICON } from '../categories';
 
 type Kind = 'expense' | 'transfer';
 
 interface Props {
   readonly initial?: Entry;
+  /** Use `initial` as a template only: new id, today's date (FR-2.7 "same again"). */
+  readonly clone?: boolean;
   /** Restrict the form to one kind (e.g. transfers only while settling). */
   readonly allowed: readonly Kind[];
   readonly onSave: (e: Entry) => void;
@@ -24,7 +27,7 @@ interface Props {
 /** "12.34" / "12,34" for inputs: locale decimal separator, no grouping. */
 const plainFor = (locale: string) => (m: Money) => { const s = moneyToString(M.abs(m)); return locale.startsWith('de') ? s.replace('.', ',') : s; };
 
-export function EntryForm({ initial, allowed, onSave, onCancel }: Props) {
+export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }: Props) {
   const { t, i18n } = useTranslation();
   const th = useTheme();
   const ccy = useCcy();
@@ -38,7 +41,8 @@ export function EntryForm({ initial, allowed, onSave, onCancel }: Props) {
   const [amountRaw, setAmountRaw] = useState(initial ? plain(initial.amount) : '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [refund, setRefund] = useState(initial ? initial.amount.minor < 0n : false);
-  const [date, setDate] = useState<string>(initial?.date ?? todayLocal());
+  const [date, setDate] = useState<string>(initial && !clone ? initial.date : todayLocal());
+  const [category, setCategory] = useState<string | null>(initial?.category ?? null);
   // expense: payers (1..n) with per-payer amounts when several
   const [payers, setPayers] = useState<string[]>(initial && initial.type !== 'transfer' ? initial.payments.map((p) => p.participantId) : meId ? [meId] : []);
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
@@ -94,8 +98,8 @@ export function EntryForm({ initial, allowed, onSave, onCancel }: Props) {
     setError(null);
     if (!amount || M.isZero(amount)) { setError(t('entry.invalid.amount')); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setError(t('entry.invalid.date')); return; }
-    const id = initial?.id ?? uuidv7();
-    const createdAt = initial?.createdAt ?? new Date().toISOString();
+    const id = initial && !clone ? initial.id : uuidv7();
+    const createdAt = initial && !clone ? initial.createdAt : new Date().toISOString();
     try {
       let entry: Entry;
       if (kind === 'transfer') {
@@ -117,7 +121,7 @@ export function EntryForm({ initial, allowed, onSave, onCancel }: Props) {
         const rule: SplitRule = mode === 'equal'
           ? { kind: 'equal', among: selected.map((p) => p.id as ParticipantId) }
           : { kind: 'exact', amounts: Object.fromEntries(selected.map((p, i) => [p.id, exactAmounts[i] ?? zeroMoney(ccy)])) };
-        entry = { id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments, shares: allocate(amount, rule, { seed: id }), createdAt, deleted: false };
+        entry = { id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments, shares: allocate(amount, rule, { seed: id }), createdAt, deleted: false, ...(category ? { category } : {}) };
       }
       validateEntry(entry);
       onSave(entry);
@@ -150,6 +154,12 @@ export function EntryForm({ initial, allowed, onSave, onCancel }: Props) {
         )}
         <H2>{t('entry.description')}</H2>
         <TextInput value={description} onChangeText={setDescription} placeholder={kind === 'transfer' ? t('entry.paymentDefault') : t('entry.descriptionPlaceholder')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.description')} />
+        {kind === 'expense' && (
+          <>
+            <H2>{t('category.label')}</H2>
+            <Row>{CATEGORIES.map((c) => <Chip key={c} label={`${CATEGORY_ICON[c]} ${t(`category.${c}`)}`} selected={category === c} onPress={() => { setCategory(category === c ? null : c); }} />)}</Row>
+          </>
+        )}
         <H2>{t('entry.date')}</H2>
         <Row>
           <TextInput value={date} onChangeText={setDate} placeholder={t('entry.dateHint')} placeholderTextColor={th.muted} style={[inputStyle, { flex: 1 }]} accessibilityLabel={t('entry.date')} autoCapitalize="none" />

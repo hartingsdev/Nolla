@@ -27,6 +27,7 @@ interface Actions {
   readonly updateEntry: (e: WireEntry) => void;
   readonly deleteEntry: (id: string) => void;
   readonly restoreEntry: (id: string) => void;
+  readonly markShareSettled: (entryId: string, participantId: string, transferIds: readonly string[]) => void;
   readonly setStatus: (status: TripStatus) => void;
   readonly setTripMeta: (patch: Partial<Pick<TripMeta, 'name' | 'ccy'>>) => void;
   readonly addParticipant: (p: Participant) => void;
@@ -55,6 +56,11 @@ export const useStore = create<State & Actions>()(
       updateEntry: (e) => set((s) => ({ entries: s.entries.map((x) => (x.id === e.id ? e : x)) })),
       deleteEntry: (id) => set((s) => ({ entries: s.entries.map((x) => (x.id === id ? { ...x, deleted: true } : x)) })),
       restoreEntry: (id) => set((s) => ({ entries: s.entries.map((x) => (x.id === id ? { ...x, deleted: false } : x)) })),
+      markShareSettled: (entryId, participantId, transferIds) => set((s) => ({
+        entries: s.entries.map((x) => (x.id === entryId
+          ? { ...x, shares: x.shares.map((sh) => (sh.participantId === participantId ? { ...sh, settledBy: transferIds.join(',') } : sh)) }
+          : x)),
+      })),
       setStatus: (status) => set((s) => ({ trip: { ...s.trip, status } })),
       setTripMeta: (patch) => set((s) => ({ trip: { ...s.trip, ...patch } })),
       addParticipant: (p) => set((s) => ({ participants: [...s.participants, p] })),

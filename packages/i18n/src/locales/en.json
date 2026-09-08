@@ -80,7 +80,12 @@
     "restore": "Restore",
     "deletedBanner": "This entry is deleted.",
     "yourShare": "Your share",
-    "paymentDefault": "Payment"
+    "paymentDefault": "Payment",
+    "sameAgain": "Same again",
+    "markSharePaid": "Mark my share paid",
+    "markPaidFor": "Mark paid for {{name}}",
+    "sharePaid": "paid",
+    "sharePaymentDesc": "Share of {{description}}"
   },
   "ledger": {
     "empty": "Nothing recorded yet.",
@@ -88,7 +93,12 @@
     "paidBy": "paid by {{name}}",
     "transferTo": "{{from}} → {{to}}",
     "showDeleted": "Show deleted",
-    "hideDeleted": "Hide deleted"
+    "hideDeleted": "Hide deleted",
+    "search": "Search",
+    "all": "All",
+    "filterType": "Type",
+    "filterPerson": "Person",
+    "noMatch": "No entries match."
   },
   "settle": {
     "title": "Settle up",
@@ -106,7 +116,10 @@
     "pays": "{{from}} pays {{to}}",
     "rounding": "Rounding",
     "roundingNote": "{{name}}: {{delta}} (under a cent)",
-    "chooseHub": "Route via"
+    "chooseHub": "Route via",
+    "matrix": "Who owes whom",
+    "matrixHint": "Rows owe columns, before netting.",
+    "plans": "Plans"
   },
   "participants": {
     "title": "Participants",
@@ -147,5 +160,17 @@
     "close": "Close trip",
     "closeBlocked": "Balances are not all zero yet.",
     "readOnly": "Trip is {{status}} — no changes possible."
+  },
+  "category": {
+    "label": "Category",
+    "rent": "Rent",
+    "groceries": "Groceries",
+    "fuel": "Fuel",
+    "tolls": "Tolls",
+    "parking": "Parking",
+    "restaurant": "Restaurant",
+    "activity": "Activity",
+    "transport": "Transport",
+    "other": "Other"
   }
 }

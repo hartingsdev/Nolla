@@ -8,7 +8,7 @@ import { type ParticipantId, type Share } from './split';
 import { localDate } from './ports';
 
 export interface WirePayment { readonly participantId: string; readonly amount: string }
-export interface WireShare { readonly participantId: string; readonly amount: string }
+export interface WireShare { readonly participantId: string; readonly amount: string; /** id of the transfer that settled this share (FR-7.4, P7) */ readonly settledBy?: string }
 export interface WireEntry {
   readonly id: string;
   readonly type: LedgerEntry['type'];
@@ -19,6 +19,7 @@ export interface WireEntry {
   readonly payments: readonly WirePayment[];
   readonly shares: readonly WireShare[];
   readonly reason?: string;
+  readonly category?: string;
   readonly createdAt: string;
   readonly deleted?: boolean;
 }
@@ -27,6 +28,9 @@ export interface WireEntry {
 export interface Entry extends LedgerEntry {
   readonly description: string;
   readonly createdAt: string;
+  readonly category?: string;
+  /** participantId → id of the transfer that settled that share */
+  readonly settled?: Readonly<Record<string, string>>;
 }
 
 export function entryToWire(e: Entry): WireEntry {
@@ -34,8 +38,9 @@ export function entryToWire(e: Entry): WireEntry {
     id: e.id, type: e.type, description: e.description,
     amount: moneyToString(e.amount), ccy: e.amount.ccy.code, date: e.date,
     payments: e.payments.map((p) => ({ participantId: p.participantId, amount: moneyToString(p.amount) })),
-    shares: e.shares.map((s) => ({ participantId: s.participantId, amount: preciseToString(s.amount) })),
+    shares: e.shares.map((s) => ({ participantId: s.participantId, amount: preciseToString(s.amount), ...(e.settled?.[s.participantId] ? { settledBy: e.settled[s.participantId] } : {}) })),
     ...(e.reason !== undefined ? { reason: e.reason } : {}),
+    ...(e.category !== undefined ? { category: e.category } : {}),
     createdAt: e.createdAt,
     ...(e.deleted ? { deleted: true } : {}),
   };
@@ -45,11 +50,14 @@ export function entryFromWire(w: WireEntry): Entry {
   const ccy: Currency = currency(w.ccy);
   const payments: Payment[] = w.payments.map((p) => ({ participantId: p.participantId as ParticipantId, amount: moneyFromString(p.amount, ccy) }));
   const shares: Share[] = w.shares.map((s) => ({ participantId: s.participantId as ParticipantId, amount: preciseFromString(s.amount, ccy) }));
+  const settledPairs = w.shares.filter((s) => s.settledBy).map((s) => [s.participantId, s.settledBy as string] as const);
   return {
     id: w.id, type: w.type, description: w.description,
     amount: moneyFromString(w.amount, ccy), date: localDate(w.date),
     payments, shares,
     ...(w.reason !== undefined ? { reason: w.reason } : {}),
+    ...(w.category !== undefined ? { category: w.category } : {}),
+    ...(settledPairs.length ? { settled: Object.fromEntries(settledPairs) } : {}),
     createdAt: w.createdAt,
     ...(w.deleted ? { deleted: true } : {}),
   };

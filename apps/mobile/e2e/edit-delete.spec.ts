@@ -11,7 +11,7 @@ test('edit changes description and date and keeps balances consistent', async ({
   await page.getByLabel('Date').first().fill('2026-03-05');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('heading', { name: 'Lidl Saturday' })).toBeVisible();
-  await expect(page.getByText('Mar 5 · Expense', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Mar 5 · Expense/).filter({ visible: true }).first()).toBeVisible();
   await expectBalancesSumToZero(page);
 });
 

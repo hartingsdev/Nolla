@@ -80,7 +80,12 @@
     "restore": "Wiederherstellen",
     "deletedBanner": "Dieser Eintrag ist gelöscht.",
     "yourShare": "Dein Anteil",
-    "paymentDefault": "Zahlung"
+    "paymentDefault": "Zahlung",
+    "sameAgain": "Nochmal so",
+    "markSharePaid": "Meinen Anteil als bezahlt markieren",
+    "markPaidFor": "Bezahlt für {{name}}",
+    "sharePaid": "bezahlt",
+    "sharePaymentDesc": "Anteil an {{description}}"
   },
   "ledger": {
     "empty": "Noch nichts erfasst.",
@@ -88,7 +93,12 @@
     "paidBy": "bezahlt von {{name}}",
     "transferTo": "{{from}} → {{to}}",
     "showDeleted": "Gelöschte anzeigen",
-    "hideDeleted": "Gelöschte ausblenden"
+    "hideDeleted": "Gelöschte ausblenden",
+    "search": "Suchen",
+    "all": "Alle",
+    "filterType": "Art",
+    "filterPerson": "Person",
+    "noMatch": "Keine passenden Einträge."
   },
   "settle": {
     "title": "Abrechnen",
@@ -106,7 +116,10 @@
     "pays": "{{from}} zahlt an {{to}}",
     "rounding": "Rundung",
     "roundingNote": "{{name}}: {{delta}} (unter einem Cent)",
-    "chooseHub": "Abwickeln über"
+    "chooseHub": "Abwickeln über",
+    "matrix": "Wer schuldet wem",
+    "matrixHint": "Zeilen schulden Spalten, vor Verrechnung.",
+    "plans": "Pläne"
   },
   "participants": {
     "title": "Teilnehmer",
@@ -147,5 +160,17 @@
     "close": "Reise schließen",
     "closeBlocked": "Noch nicht alle Salden bei null.",
     "readOnly": "Reise ist {{status}} — keine Änderungen möglich."
+  },
+  "category": {
+    "label": "Kategorie",
+    "rent": "Miete",
+    "groceries": "Einkauf",
+    "fuel": "Tanken",
+    "tolls": "Maut",
+    "parking": "Parken",
+    "restaurant": "Restaurant",
+    "activity": "Aktivität",
+    "transport": "Transport",
+    "other": "Sonstiges"
   }
 }

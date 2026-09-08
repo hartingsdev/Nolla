@@ -1,0 +1,32 @@
+# Local monitoring stack: docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
+    ports: ["9090:9090"]
+    volumes:
+      - ./ops/prometheus:/etc/prometheus:ro
+      - promdata:/prometheus
+    extra_hosts: ["host.docker.internal:host-gateway"]
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    ports: ["9093:9093"]
+    volumes: ["./ops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"]
+  grafana:
+    image: grafana/grafana:12.1.0
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_NAME: postgres://vst:vst@postgres:5432/vst?sslmode=disable
+    ports: ["9187:9187"]
+volumes:
+  promdata:
+  grafanadata:

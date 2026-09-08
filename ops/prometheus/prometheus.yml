@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs: [{ targets: ["alertmanager:9093"] }]
+
+scrape_configs:
+  - job_name: api
+    # The API serves /metrics on an internal port (observability.md §7). Locally it runs on the host.
+    static_configs: [{ targets: ["host.docker.internal:9464"] }]
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics.token
+  - job_name: postgres
+    static_configs: [{ targets: ["postgres-exporter:9187"] }]
+  - job_name: prometheus
+    static_configs: [{ targets: ["localhost:9090"] }]

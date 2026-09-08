@@ -1,0 +1,13 @@
+# Local default: everything to a webhook stub. Production routing (push / e-mail) is a deferral like D16.
+route:
+  receiver: default
+  group_by: [alertname]
+  routes:
+    - matchers: [severity="page"]
+      receiver: default
+      repeat_interval: 1h
+receivers:
+  - name: default
+    webhook_configs:
+      - url: http://host.docker.internal:9999/alerts
+        send_resolved: true
