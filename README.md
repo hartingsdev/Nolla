@@ -7,7 +7,9 @@ computes a settlement plan.
 
 ## Status
 
-Requirements phase. No code yet.
+Milestones M0–M9 are done: the app runs on iOS, Android and the web, against a
+local ledger or a shared trip on the API. What is left before a real trip is
+distribution (M10–M11), which needs Apple and Google developer accounts.
 
 - [Requirements & feature plan](docs/requirements.md) — scope, decision log, domain model,
   functional/non-functional requirements, settlement algorithm, release plan,
@@ -26,14 +28,47 @@ billing deferred. Full rationale in §1.3 of the requirements.
 
 ## Next step
 
-Start milestone M0 of the architecture plan (monorepo scaffold with the import
-boundary rules), then M1 (money types and split allocation with property
-tests). Q10 (how v0.1 reaches the group) must be settled before M10.
+Q10 — how v0.1 reaches the group (TestFlight and Play internal testing, or
+sideloaded dev builds) — blocks M10 and needs Apple and Google developer
+accounts. Everything else is v0.2 work: an audit trail per entry (FR-10.2),
+transfer dispute (FR-5.3), and the two narrower adjustment cases noted in the
+requirements.
+
+## Try it
+
+Two ways in. The first needs nothing but Node.
+
+**On this device only** — no account, no backend:
+
+```
+pnpm install
+pnpm --filter @vst/mobile web        # http://localhost:8081
+```
+
+Settings → *Load sample trip* fills the ledger with the first rows of the real
+spreadsheet; the overview then asks which participant you are.
+
+**With a shared trip** — sign-in, invites and sync, still with no Docker and no
+database to install (the API runs Postgres in-process via PGlite):
+
+```
+pnpm --filter @vst/api dev:pglite    # terminal 1 — API on :8080
+pnpm --filter @vst/mobile web        # terminal 2 — app on :8081
+```
+
+Sign in with any e-mail address. Nothing is sent: the dev API captures the
+magic link, so open <http://localhost:8080/dev/magic-links> and follow the URL
+it lists. From there you can create a shared trip, invite a second browser
+profile, and watch both sides converge.
+
+**On a phone**: `pnpm --filter @vst/mobile start`, then scan the QR code with
+Expo Go. Set `EXPO_PUBLIC_API_URL` to your machine's LAN address if you want
+the phone to reach the dev API rather than `localhost`.
 
 ## Development
 
 ```
-pnpm install            # Node 22, pnpm 10 (see .nvmrc / packageManager)
+pnpm install            # Node 24, pnpm 10 (see .nvmrc / packageManager)
 pnpm check              # lint + typecheck + test, what CI runs
 pnpm --filter @vst/domain test:watch
 pnpm --filter @vst/mobile web         # the app in a browser (Expo web)
@@ -73,4 +108,5 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] M5 — Hono API: trips, invites, participants, ledger + change feed, balances, settlement, lifecycle, metrics
 - [x] M6 — shared trips in the app: sign-in (magic link), invites, claiming, sync engine with outbox + change feed, conflict notices
 - [x] M9 — receipts (presigned uploads, retention job) and offline-write polish (queued badges, backoff, replay)
+- [x] v0.2 so far — CSV export (FR-7.8), share and percentage splits (FR-3.5), per-person tip (FR-3.7), adjustments (FR-6.1)
 - [ ] M10–M11 — distribution (needs Apple/Google developer accounts), the trip

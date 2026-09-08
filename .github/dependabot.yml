@@ -7,12 +7,13 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    # pnpm workspaces: the root manifest plus every workspace package.
-    directories:
-      - /
-      - /apps/api
-      - /apps/mobile
-      - /packages/*
+    # The workspace ROOT only. Dependabot reads pnpm-workspace.yaml from here, updates
+    # every member's package.json and regenerates the one lockfile with them. Listing
+    # the workspace directories separately (as this file used to) makes each one its own
+    # project with no lockfile of its own, so pnpm-lock.yaml is never regenerated and
+    # every PR dies on ERR_PNPM_OUTDATED_LOCKFILE — dependabot-core#11135, and #11487
+    # now rejects that shape outright.
+    directory: /
     schedule:
       interval: weekly
       day: monday
@@ -29,19 +30,22 @@ updates:
         patterns: ["expo", "expo-*", "@expo/*", "react-native*", "react", "react-dom"]
         update-types: [minor, patch]
     ignore:
-      # Expo SDK pins these native module versions in bundledNativeModules.json.
-      # A newer major installs cleanly and then crashes on device, so the SDK upgrade
-      # has to drive them, not Dependabot.
-      - dependency-name: "@react-native-async-storage/async-storage"
-        update-types: [version-update:semver-major]
-      - dependency-name: "react-native-gesture-handler"
-        update-types: [version-update:semver-major]
+      # Expo SDK 57 pins these in bundledNativeModules.json, several of them exactly
+      # (react-native 0.86.3, async-storage 2.2.0). React Native is pre-1.0, so 0.86 → 0.87
+      # is a breaking change wearing a minor's clothes: it installs cleanly, passes the web
+      # build, and then fails on a device. Blocking only majors let exactly that through.
+      # `npx expo install --check` drives these, together with the SDK upgrade.
       - dependency-name: "react-native"
-        update-types: [version-update:semver-major]
+      - dependency-name: "react-native-screens"
+      - dependency-name: "react-native-safe-area-context"
+      - dependency-name: "react-native-gesture-handler"
+      - dependency-name: "react-native-web"
+      - dependency-name: "@react-native-async-storage/async-storage"
+      # React itself is pinned per SDK; take security patches, leave the line to Expo.
       - dependency-name: "react"
-        update-types: [version-update:semver-major]
+        update-types: [version-update:semver-major, version-update:semver-minor]
       - dependency-name: "react-dom"
-        update-types: [version-update:semver-major]
+        update-types: [version-update:semver-major, version-update:semver-minor]
       # typescript-eslint's peer range is >=4.8.4 <6.1.0, so TypeScript 7 breaks linting.
       # Remove this once typescript-eslint supports it.
       - dependency-name: "typescript"
