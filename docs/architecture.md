@@ -441,6 +441,21 @@ server row winning, any other 4xx drops the op and surfaces the message. A
 pulled entry never overwrites one with a pending local write. The `local` trip
 never syncs and needs no account.
 
+**Delivery is at least once, so writes must be idempotent.** A round can push
+an op and lose the response — the write landed, the client still has it queued.
+Three rules follow, and each one is a bug we hit rather than a precaution:
+
+- A repeated `POST /participants` with the same client-generated id returns the
+  existing row instead of failing on the primary key. Without it the server
+  answered 500, and the client dropped a write it had already shown the user.
+- A repeated create comes back as a 409 carrying the server's row. When that row
+  is byte-for-byte what we sent, it is our own delivery, so the client treats it
+  as the missing acknowledgement rather than telling the user that somebody else
+  edited an entry only they ever touched.
+- A 5xx keeps the op queued and backs the round off. Only a 4xx means "this will
+  never be accepted"; dropping a change because the server was briefly broken
+  loses data the user believes is saved.
+
 ### 6.4 Concurrency
 
 Optimistic: every entry carries `version`; `PATCH`/`DELETE` require

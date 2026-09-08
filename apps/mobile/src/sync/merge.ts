@@ -100,6 +100,22 @@ export function ack(state: TripState, opId: string, result?: { id: string; versi
   return { ...state, outbox, versions, entries };
 }
 
+/**
+ * Whether the server's row is the write we pushed, ignoring what only the
+ * server sets. A create replayed after a lost response comes back as a 409, and
+ * without this the user would be told someone else changed an entry that only
+ * they ever touched.
+ */
+export function sameWireEntry(mine: WireEntry, theirs: WireEntry): boolean {
+  const shape = (e: WireEntry) => JSON.stringify({
+    id: e.id, type: e.type, description: e.description, amount: e.amount, ccy: e.ccy, date: e.date,
+    payments: e.payments.map((p) => [p.participantId, p.amount]),
+    shares: e.shares.map((x) => [x.participantId, x.amount]),
+    reason: e.reason ?? null, category: e.category ?? null, deleted: e.deleted ?? false,
+  });
+  return shape(mine) === shape(theirs);
+}
+
 /** Our write lost (409): the server's row wins, ours is kept as a notice. */
 export function conflict(state: TripState, opId: string, current: WireEntry & { version: number }): TripState {
   const op = state.outbox.find((o) => o.opId === opId);

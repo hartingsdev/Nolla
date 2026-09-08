@@ -112,6 +112,24 @@ describe('trips, invites, participants', () => {
     expect((await call('/trips', { token })).body.trips.map((x: { id: string }) => x.id)).toContain(tripId);
   });
 
+  it('adding the same participant twice is idempotent, because the outbox delivers at least once', async () => {
+    const { token } = await signIn('t1b', 'robert2@t.de');
+    const { tripId } = await newTrip(token);
+    const id = crypto.randomUUID();
+    const first = await call(`/trips/${tripId}/participants`, { ...json({ id, displayName: 'Max' }), token });
+    expect(first.status).toBe(201);
+    // The same op replayed after a lost response must not 500 and must not duplicate.
+    const again = await call(`/trips/${tripId}/participants`, { ...json({ id, displayName: 'Max' }), token });
+    expect(again.status).toBe(201);
+    expect(again.body.id).toBe(id);
+    expect(again.body.seq).toBe(first.body.seq);   // no second change-feed bump
+    const t = await call(`/trips/${tripId}`, { token });
+    expect(t.body.participants.filter((p: { id: string }) => p.id === id)).toHaveLength(1);
+    // Someone else's participant id is not a way to look into another trip.
+    const other = await newTrip(token, 'Other');
+    expect((await call(`/trips/${other.tripId}/participants`, { ...json({ id, displayName: 'Max' }), token })).status).toBe(404);
+  });
+
   it('other users get 404 for a trip they are not in; invites admit them; placeholders can be claimed', async () => {
     const a = await signIn('t2a'); const b = await signIn('t2b');
     const { tripId } = await newTrip(a.token);

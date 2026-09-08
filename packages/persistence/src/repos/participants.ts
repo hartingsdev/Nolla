@@ -14,9 +14,23 @@ const toRow = (p: typeof participants.$inferSelect): ParticipantRow => ({
 });
 
 export const participantRepo = {
-  /** Add a participant; `userId` null = placeholder (FR-1.3). */
+  /**
+   * Add a participant; `userId` null = placeholder (FR-1.3).
+   *
+   * Idempotent on the client-generated id: the outbox delivers at least once
+   * (A7), so a round that pushed this write and then lost the response will
+   * push it again. Re-inserting would fail on the primary key and the client
+   * would drop a write it believes landed, so a repeat returns the row that is
+   * already there — including on a trip that has since been closed, since the
+   * write itself already happened.
+   */
   async add(db: Db, input: { id: string; tripId: string; displayName: string; userId?: string | null; joinedAt: string }): Promise<ParticipantRow> {
     return db.transaction(async (tx) => {
+      const existing = await tx.query.participants.findFirst({ where: eq(participants.id, input.id) });
+      if (existing) {
+        if (existing.tripId !== input.tripId) throw new NotFoundError(`participant ${input.id}`);
+        return toRow(existing);
+      }
       await tripRepo.assertWritable(tx, input.tripId, 'membership');
       const seq = await nextSeq(tx, input.tripId);
       const [row] = await tx.insert(participants).values({ id: input.id, tripId: input.tripId, displayName: input.displayName, userId: input.userId ?? null, joinedAt: input.joinedAt, seq }).returning();

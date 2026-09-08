@@ -16,8 +16,14 @@ const uuid = (n: number) => `${String(n).padStart(8, '0')}-0000-4000-8000-000000
 /** A fake server: a ledger with versions and a seq counter, plus a failure switch. */
 class FakeApi implements SyncApi {
   rows = new Map<string, EntryRecord>(); seq = 0; offline = false; calls: string[] = [];
+  /** Thrown by the next call, once — for server-side failures that are not the network. */
+  failNext: ApiError | null = null;
   private bump(rec: WireEntry, version: number): EntryRecord { this.seq += 1; const r = { ...rec, tripId: 'trip', version, seq: String(this.seq), updatedAt: 'now' }; this.rows.set(rec.id, r); return r; }
-  private guard(name: string) { this.calls.push(name); if (this.offline) throw new NetworkError('offline'); }
+  private guard(name: string) {
+    this.calls.push(name);
+    if (this.failNext) { const e = this.failNext; this.failNext = null; throw e; }
+    if (this.offline) throw new NetworkError('offline');
+  }
   async pull(_t: string, since: string): Promise<Feed> {
     this.guard('pull');
     const entries = [...this.rows.values()].filter((r) => BigInt(r.seq) > BigInt(since)).sort((a, b) => Number(BigInt(a.seq) - BigInt(b.seq)));
@@ -123,6 +129,48 @@ describe('syncTrip', () => {
     expect(r).toMatchObject({ ok: true, pushed: 1 });
     expect(api.rows.has(b.id)).toBe(true);
     expect(store.state.syncError).toBeNull(); // cleared by the successful pull; the rejection was logged on the way
+  });
+
+  it('a create delivered twice is acknowledged, not reported as someone else\'s edit', async () => {
+    const api = new FakeApi();
+    const a = wire(uuid(1), 100n);
+    const store = new MemStore({ ...emptyTrip(meta), entries: [a], outbox: [{ opId: '1', kind: 'create', entry: a }] });
+    await syncTrip('trip', api, store);                  // lands on the server
+    // The same op again, as if the first response had been lost on the way back.
+    store.set('trip', (s) => ({ ...s, outbox: [{ opId: '2', kind: 'create', entry: a }] }));
+    const r = await syncTrip('trip', api, store);
+    expect(r).toMatchObject({ ok: true, pushed: 1 });
+    expect(store.state.outbox).toEqual([]);
+    expect(store.state.conflicts).toEqual({});           // nothing to tell the user about
+    expect(store.state.versions[a.id]).toBe(1);
+  });
+
+  it('but a create colliding with a different row is still a conflict', async () => {
+    const api = new FakeApi();
+    const a = wire(uuid(1), 100n);
+    const store = new MemStore({ ...emptyTrip(meta), entries: [a], outbox: [{ opId: '1', kind: 'create', entry: a }] });
+    await syncTrip('trip', api, store);
+    api.serverEdit(a.id, 'theirs');
+    const mine = { ...a, description: 'mine' };
+    store.set('trip', (s) => ({ ...s, outbox: [{ opId: '2', kind: 'create', entry: mine }] }));
+    await syncTrip('trip', api, store);
+    expect(store.state.conflicts[a.id]?.description).toBe('mine');
+    expect(store.state.entries[0]?.description).toBe('theirs');
+  });
+
+  it('a 5xx keeps the write queued: the server is broken, the change is not', async () => {
+    const api = new FakeApi();
+    const a = wire(uuid(1), 100n);
+    const store = new MemStore({ ...emptyTrip(meta), entries: [a], outbox: [{ opId: '1', kind: 'create', entry: a }] });
+    api.failNext = new ApiError(500, 'INTERNAL', 'internal error');
+    expect(await syncTrip('trip', api, store)).toMatchObject({ ok: false, error: 'other' });
+    expect(store.state.outbox).toHaveLength(1);      // still ours to deliver
+    expect(store.state.failedRounds).toBe(1);
+    expect(api.rows.has(a.id)).toBe(false);
+    // …and it lands once the server recovers.
+    expect(await syncTrip('trip', api, store)).toMatchObject({ ok: true, pushed: 1 });
+    expect(store.state.outbox).toEqual([]);
+    expect(store.state.failedRounds).toBe(0);
   });
 
   it('an expired session stops the round with an auth error', async () => {

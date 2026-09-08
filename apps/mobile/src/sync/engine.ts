@@ -1,6 +1,6 @@
 import { type WireEntry } from '@vst/domain';
 import { ApiError, type EntryRecord, type Feed, NetworkError } from '../api/types';
-import { type OutboxOp, type TripState, ack, applyFeed, conflict, reject } from './merge';
+import { type OutboxOp, type TripState, ack, applyFeed, conflict, reject, sameWireEntry } from './merge';
 
 /** The slice of the API the engine needs; ApiClient satisfies it, tests fake it. */
 export interface SyncApi {
@@ -31,6 +31,10 @@ export type SyncOutcome = { ok: true; pushed: number; pulled: number } | { ok: f
  * One sync round: push the outbox in order, then pull the feed to the end.
  * Stops on the first network failure (everything stays queued); drops ops the
  * server rejects; turns 409s into conflicts.
+ *
+ * A 5xx is the server's problem, not a rejection: the write stays queued and
+ * the round backs off, because dropping it would lose a change the user has
+ * already been shown. Only a 4xx means "this will never be accepted".
  */
 export async function syncTrip(tripId: string, api: SyncApi, store: SyncStore, now: () => number = Date.now): Promise<SyncOutcome> {
   let pushed = 0;
@@ -46,9 +50,18 @@ export async function syncTrip(tripId: string, api: SyncApi, store: SyncStore, n
       if (e instanceof NetworkError) return fail(store, tripId, 'network', e.message);
       if (e instanceof ApiError && e.status === 401) return fail(store, tripId, 'auth', e.message);
       if (e instanceof ApiError && e.status === 409 && e.current) {
-        store.set(tripId, (s) => conflict(s, op.opId, e.current as WireEntry & { version: number }));
+        const current = e.current as WireEntry & { version: number };
+        // Our own create, delivered twice: the server holds exactly what we sent,
+        // so this is the missing acknowledgement, not somebody else's edit.
+        if (op.kind === 'create' && sameWireEntry(op.entry, current)) {
+          store.set(tripId, (s) => ack(s, op.opId, current));
+          pushed += 1;
+          continue;
+        }
+        store.set(tripId, (s) => conflict(s, op.opId, current));
         continue;
       }
+      if (e instanceof ApiError && e.status >= 500) return fail(store, tripId, 'other', e.message);
       store.set(tripId, (s) => reject(s, op.opId, e instanceof Error ? e.message : String(e)));
     }
   }
