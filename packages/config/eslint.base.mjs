@@ -26,6 +26,7 @@ export const base = tseslint.config(
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true }],
       // Conflicts with no-non-null-assertion (strict); we prefer `?? fallback` over `!` anyway.
       '@typescript-eslint/non-nullable-type-assertion-style': 'off',
     },

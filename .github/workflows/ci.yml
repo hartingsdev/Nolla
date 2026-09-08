@@ -27,6 +27,32 @@ jobs:
         env:
           CI: 1
 
+  persistence-postgres:
+    name: Persistence tests on real Postgres
+    runs-on: ubuntu-latest
+    needs: check
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: vst, POSTGRES_PASSWORD: vst, POSTGRES_DB: vst }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vst" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vst/persistence test
+        env:
+          DATABASE_URL: postgres://vst:vst@localhost:5432/vst
+      - run: pnpm --filter @vst/persistence migrate && pnpm --filter @vst/persistence check-invariants
+        env:
+          DATABASE_URL: postgres://vst:vst@localhost:5432/vst
+
   ui:
     name: UI click tests (Playwright, web build)
     runs-on: ubuntu-latest

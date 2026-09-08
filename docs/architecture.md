@@ -286,6 +286,16 @@ entry_history    (id, entry_id, trip_id, version, actor, at, diff JSONB)
 - No `float`/`double precision` column anywhere — a CI check greps the
   migrations.
 
+**Child row order is data.** `payments.ord` and `shares.ord` preserve the
+order the client sent, because `roundAll`'s tie-break rotates by position: if
+the server returned shares in a different order than the client used, the two
+could display different cents for the same entry. Rows are read back by `ord`.
+
+**Testing without Docker.** The persistence suite runs on PGlite (Postgres
+compiled to WASM, in-process) by default and on a real Postgres when
+`DATABASE_URL` is set; CI does both. Same SQL, same triggers, same deferred
+constraints — PGlite is not a mock.
+
 **Why `split_rule` is stored as JSON alongside the materialised shares:** the
 shares are what the invariants are checked against and what balances read; the
 rule is what the edit screen re-opens and what "same again" duplicates. Storing

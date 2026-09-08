@@ -38,6 +38,9 @@ pnpm check              # lint + typecheck + test, what CI runs
 pnpm --filter @vst/domain test:watch
 pnpm --filter @vst/mobile web         # the app in a browser (Expo web)
 pnpm --filter @vst/mobile e2e         # UI click tests: exports the web build, serves it, runs Playwright
+pnpm --filter @vst/persistence test   # ledger schema tests on PGlite (in-process Postgres); set DATABASE_URL to use a real one
+pnpm --filter @vst/persistence migrate           # apply migrations/*.sql to DATABASE_URL
+pnpm --filter @vst/persistence check-invariants  # the nightly correctness job; exit 1 on any violation
 pnpm --filter @vst/mobile start       # Expo dev server for iOS/Android (Expo Go or a dev build)
 docker compose up -d    # postgres, minio, mailpit for local API work (from M3 on)
 ```
@@ -60,7 +63,7 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] UI batch 2 — edit entries, date, multiple payers, direct payments, delete/restore, per-person drill-down, trip lifecycle (freeze/close/reopen) with write rules, trip name/currency
 - [x] UI batch 3 — categories, per-share "mark paid" (FR-7.4), who-owes-whom matrix, "same again", ledger search and filters
 - [x] Observability plan — [docs/observability.md](docs/observability.md); Prometheus/Grafana/Alertmanager stack and rules in `ops/`, `docker-compose.observability.yml`
-- [ ] M3 — schema + persistence (Drizzle)
+- [x] M3 — Postgres schema with invariant triggers, Drizzle repositories, invariant job, tests on PGlite + real Postgres
 - [ ] M4 — identity
 - [ ] M5 — API (framework: to be decided — Hono or Fastify)
 - [ ] M6–M11 — client, distribution, the trip
