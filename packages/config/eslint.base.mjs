@@ -43,7 +43,16 @@ export const base = tseslint.config(
   {
     // Tests may use `!` on values they just constructed.
     files: ['**/*.test.ts', '**/testing/**', '**/e2e/**'],
-    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      // HTTP tests inspect parsed JSON bodies; typing every response shape adds nothing to the assertions.
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+    },
   },
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.config.*'] },
 );

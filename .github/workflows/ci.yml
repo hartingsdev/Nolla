@@ -28,7 +28,7 @@ jobs:
           CI: 1
 
   persistence-postgres:
-    name: Persistence tests on real Postgres
+    name: Persistence + API tests on real Postgres
     runs-on: ubuntu-latest
     needs: check
     services:
@@ -46,7 +46,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @vst/persistence test
+      - run: pnpm --workspace-concurrency=1 --filter @vst/persistence --filter @vst/api test
         env:
           DATABASE_URL: postgres://vst:vst@localhost:5432/vst
       - run: pnpm --filter @vst/persistence migrate && pnpm --filter @vst/persistence check-invariants

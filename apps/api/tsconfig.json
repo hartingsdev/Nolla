@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["node"], "allowImportingTsExtensions": true },
+  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["node"], "allowImportingTsExtensions": true, "exactOptionalPropertyTypes": false },
   "include": ["src"]
 }

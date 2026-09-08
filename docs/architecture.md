@@ -494,7 +494,7 @@ tests against a real Postgres (testcontainers), a grep that fails on any
 |---|---|---|---|
 | A1 | `bigint` fixed-point for both money types | `decimal.js` / `big.js`; Postgres-only arithmetic | Exact, zero dependencies, identical on client and server, trivially serialisable; a decimal lib adds a dependency for no gain at 8 dp |
 | A2 | Own identity layer on OIDC verification + magic links | Supabase Auth, Clerk, Auth0, Firebase | D3 forbids managed auth in the core; verifying ID tokens is ~100 lines; the stores' rules (deletion, Apple parity) are easier to satisfy when we own the flow |
-| A3 | Hono on Node | Fastify, Express, NestJS, tRPC | Small, standards-based (Web Request/Response), runs unchanged on Node, Bun or edge runtimes — keeps D3 honest; zod contracts give tRPC-like typing without its coupling |
+| A3 | Hono on Node (confirmed by the owner at M5) | Fastify, Express, NestJS, tRPC | Small, standards-based (Web Request/Response), runs unchanged on Node, Bun or edge runtimes — keeps D3 honest; zod contracts give tRPC-like typing without its coupling |
 | A4 | Drizzle in a separate `persistence` package | Prisma; raw SQL | Thin, SQL-shaped, migrations are plain SQL we can read; isolated so the domain never sees it. Prisma's engine binary complicates portable containers |
 | A5 | Polling a per-trip sequence for live updates | WebSockets, SSE, Firebase-style realtime | Stateless API, works everywhere, adequate for a 5-person ledger; transport is invisible to the client and upgradable |
 | A6 | Domain runs on the client too | Server computes everything | Offline read, instant balance updates, and one implementation of the money rules instead of two |
