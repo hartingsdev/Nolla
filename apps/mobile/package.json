@@ -29,6 +29,7 @@
     "expo-image-picker": "~57.0.16",
     "expo-linking": "~57.0.9",
     "expo-router": "~57.0.19",
+    "expo-sharing": "~57.0.18",
     "expo-status-bar": "~57.0.1",
     "i18next": "^26.4.2",
     "react": "19.2.3",
@@ -42,10 +43,10 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@types/react": "~19.2.2",
-    "vitest": "^5.0.0",
     "eslint-plugin-i18next": "^6.1.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "@playwright/test": "1.56.1"
+    "vitest": "^5.0.0"
   }
 }

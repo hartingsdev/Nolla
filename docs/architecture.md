@@ -71,8 +71,8 @@ pnpm workspaces, TypeScript throughout, strict mode everywhere.
 │   └── api/               Hono HTTP server + use-cases + adapters
 ├── packages/
 │   ├── domain/            PURE. Money, Precise, split, ledger, settlement,
-│   │                      lifecycle, entitlements. No I/O, no framework,
-│   │                      no vendor, no Date.now() (Clock port).
+│   │                      lifecycle, entitlements, CSV export. No I/O, no
+│   │                      framework, no vendor, no Date.now() (Clock port).
 │   ├── contracts/         zod schemas for every request/response; shared
 │   │                      by client and server; money fields are strings.
 │   ├── persistence/       Drizzle schema, migrations (SQL, committed),
@@ -227,6 +227,29 @@ adjustments):
 - Serialisation round-trips: `Money`/`Precise` → string → back is identity.
 - `[+2,+3,−4,−5,+4]` and the other known-hard cases as fixed unit tests
   (NFR-13).
+
+### 4.7 Export
+
+`tripCsv` (FR-7.8) turns a trip into the shape of the sheet it replaces: one row
+per entry, one column per participant holding that person's share, then the
+totals block and the settlement plan. It stays in the domain because it is a
+pure function over the same ledger the screens read — which is what makes the
+export and the balances impossible to disagree.
+
+Three details are load-bearing:
+
+- **Shares print at their real precision, amounts at the currency's.** A share is
+  `Precise` (D8), so `€55.18 / 5` exports as `11.036`, not `11.04`. Rounding it
+  for the file would produce a spreadsheet whose columns do not add up.
+- **The dialect is a parameter.** German Excel reads `,` as the decimal point, so
+  the field separator moves to `;` (`csvDialect`). Wrong here and every amount
+  arrives as text.
+- **Free text is escaped against formula injection**: a description starting `=`,
+  `+`, `-` or `@` gets a leading apostrophe. Amount cells are built by the module
+  itself and never pass through that guard, so negative amounts stay numbers.
+
+The caller supplies the timestamp (Clock), the translated headings (D10) and the
+platform write — a download on web, the share sheet on a phone.
 
 ---
 

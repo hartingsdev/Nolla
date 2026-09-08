@@ -3,6 +3,7 @@ import { Alert, Platform, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { transition } from '@vst/domain';
+import { useCsvFile, saveCsv } from '../src/export';
 import { useAllSettled, useLiveEntries, useTrip } from '../src/selectors';
 import { useApi } from '../src/sync/useSync';
 import { useStore } from '../src/store';
@@ -30,6 +31,8 @@ export default function Settings() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exported, setExported] = useState<string | null>(null);
+  const csvFile = useCsvFile();
   const meta = trip.meta;
   const ctx = { isAdmin: true, allBalancesZero: allSettled };
   const can = (action: 'freeze' | 'reopen' | 'close') => transition(meta.status, action, ctx).ok;
@@ -62,6 +65,11 @@ export default function Settings() {
     confirm(t('auth.deleteConfirm'), () => {
       void api.deleteAccount().then(() => { setAuth(null); for (const x of Object.values(useStore.getState().trips)) if (x.meta.remote) removeTrip(x.meta.id); router.replace('/trips'); });
     });
+  };
+  const exportCsv = async () => {
+    setError(null);
+    try { const f = csvFile(); await saveCsv(f.filename, f.text); setExported(f.filename); }
+    catch (e) { setError(t('export.failed', { message: e instanceof Error ? e.message : String(e) })); }
   };
   const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: th.border } as const;
 
@@ -98,6 +106,13 @@ export default function Settings() {
           {can('reopen') && <Button kind="secondary" label={t('trip.reopen')} onPress={() => { void apply('reopen'); }} />}
         </Row>
         {meta.status === 'settling' && !allSettled && <Body muted style={{ fontSize: 13 }}>{t('trip.closeBlocked')}</Body>}
+      </Card>
+
+      <Card>
+        <H2>{t('export.title')}</H2>
+        <Body muted style={{ fontSize: 13 }}>{t('export.hint')}</Body>
+        <Button kind="secondary" label={t('export.csv')} onPress={() => { void exportCsv(); }} disabled={!hasEntries} />
+        {exported && <Body muted style={{ fontSize: 13 }}>{t('export.done', { filename: exported })}</Body>}
       </Card>
 
       <Card>

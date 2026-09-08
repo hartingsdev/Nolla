@@ -241,5 +241,37 @@
     "count_one": "{{count}} Beleg",
     "count_other": "{{count}} Belege",
     "permission": "Für Belegfotos wird Kamerazugriff benötigt."
+  },
+  "export": {
+    "title": "Export",
+    "csv": "Als CSV exportieren",
+    "hint": "Eine Tabelle mit allen Einträgen, den Summen und dem Ausgleichsplan.",
+    "done": "{{filename}} exportiert",
+    "failed": "Export fehlgeschlagen: {{message}}",
+    "untitled": "Reise",
+    "label": {
+      "trip": "Reise",
+      "currency": "Währung",
+      "status": "Status",
+      "exported": "Exportiert",
+      "date": "Datum",
+      "type": "Art",
+      "description": "Beschreibung",
+      "category": "Kategorie",
+      "amount": "Betrag",
+      "paidBy": "Bezahlt von",
+      "settled": "Beglichen",
+      "entries": "Einträge",
+      "totals": "Summen",
+      "participant": "Teilnehmer",
+      "paid": "Bezahlt",
+      "owed": "Anteil",
+      "transfers": "Zahlungen",
+      "balance": "Saldo",
+      "total": "Gesamt",
+      "settlement": "Ausgleich",
+      "from": "Von",
+      "to": "An"
+    }
   }
 }

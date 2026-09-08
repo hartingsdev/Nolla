@@ -241,5 +241,37 @@
     "count_one": "{{count}} receipt",
     "count_other": "{{count}} receipts",
     "permission": "Camera access is needed to photograph a receipt."
+  },
+  "export": {
+    "title": "Export",
+    "csv": "Export as CSV",
+    "hint": "A spreadsheet of every entry, the totals and the settlement plan.",
+    "done": "Exported {{filename}}",
+    "failed": "Export failed: {{message}}",
+    "untitled": "Trip",
+    "label": {
+      "trip": "Trip",
+      "currency": "Currency",
+      "status": "Status",
+      "exported": "Exported",
+      "date": "Date",
+      "type": "Type",
+      "description": "Description",
+      "category": "Category",
+      "amount": "Amount",
+      "paidBy": "Paid by",
+      "settled": "Settled",
+      "entries": "Entries",
+      "totals": "Totals",
+      "participant": "Participant",
+      "paid": "Paid",
+      "owed": "Owed",
+      "transfers": "Payments",
+      "balance": "Balance",
+      "total": "Total",
+      "settlement": "Settlement",
+      "from": "From",
+      "to": "To"
+    }
   }
 }

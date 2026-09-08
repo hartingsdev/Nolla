@@ -415,7 +415,7 @@ an entry whose shares do not sum to its total.
 | FR-7.5 | S | Ledger view: chronological, searchable, filterable by participant / category / type / date. |
 | FR-7.6 | S | Drill-down: tapping a balance shows exactly which entries produced it. |
 | FR-7.7 | C | Statistics: spend per category, per person, per day; largest expense; spend curve over the trip. |
-| FR-7.8 | C | Export CSV / XLSX / PDF (a spreadsheet-shaped export eases the migration away from the sheet and gives an exit path). |
+| FR-7.8 | C | Export CSV / XLSX / PDF (a spreadsheet-shaped export eases the migration away from the sheet and gives an exit path). *CSV shipped: entries × participants, totals and the settlement plan, in the locale's dialect; XLSX and PDF still open.* |
 
 ### FR-8 Settlement
 
