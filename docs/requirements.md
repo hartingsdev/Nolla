@@ -2,6 +2,10 @@
 
 Status: **Draft v1.1** · Owner: project team · Date: 2026-09-08
 
+Changes in v1.2: both stores at launch; English source with German shipped in
+v0.1; receipt retention configurable per trip (12-month default, purge deferred);
+paid tiers planned as an axis-agnostic entitlement model; three decisions
+explicitly deferred (D13, D15, D16). Earlier —
 Changes in v1.1: platform decision reversed to native app-store distribution;
 accounts required up front; multi-tenant schema from day one; hosting deferred
 behind portability constraints; sheet import and its test fixture both dropped;
@@ -63,6 +67,14 @@ Resolved 2026-09-08. These supersede the open questions in the v1.0 draft.
 | D5 | **Build for this group; don't foreclose the product** | Ship for the next trip, keep the door open | Multi-tenant schema, no hardcoded participants, pure domain module — roughly 10% over a single-group build. Product scaffolding deferred per §1.2 |
 | D6 | **In scope**: per-share paid status (FR-7.4), per-person tip (FR-3.7), preferred-creditor routing (FR-8.5) | All three reflect real group behaviour | As specified, v0.2 |
 | D7 | **Sheet import and the golden fixture both dropped** | Neither the importer nor a transcribed test fixture is wanted | No import UI, no spreadsheet-derived test data. Correctness rests on property-based tests over the invariants (NFR-11, NFR-13) |
+| D9 | **Both stores at launch** (Q9) | Expo builds both from one source; the group is mixed iOS/Android, so shipping one first excludes friends from the trip the app was built for | Two developer accounts, two review queues, two listings. Development effort roughly unchanged |
+| D10 | **English source strings, German shipped from v0.1** (Q14) | The group is German-speaking, but a product needs an English source; retrofitting i18n means extracting every hardcoded string | i18n plumbing and one translation pass in v0.1 (~1 day). Locale-aware formatting regardless (NFR-8) |
+| D11 | **Receipt retention configurable per trip, default 12 months; purge job deferred to v0.2** (Q12) | Storage is the real cost driver, so retention is a per-trip lever — but the deletion job is not MVP-critical | The *metadata* is mandatory from day one: a retention setting on every trip and `uploaded_at` on every receipt, so the purge job ships later with no backfill (FR-12.5). Storage grows unbounded until it does — accepted, and tracked as a risk |
+| D12 | **Paid tiers planned; billing deferred** (Q13) | The owner intends to charge, most likely for storage, but demand is unproven | v0.1 builds the entitlement model only: a plan on each account, every limit check routed through one service (FR-12.1–12.3). No billing, no in-app purchase, no paywall UI. Apple and Google require digital subscriptions to go through IAP at a 15–30% cut — that shapes pricing whenever it happens, and is why no Stripe-style flow can live in the app |
+| D13 | **Deferred: what the paid tier gates** (Q15) | Owner will decide later | Forces the entitlement model to be *axis-agnostic*: a plan carries a set of named limits, and no limit is special-cased in the domain. Costs a little indirection, buys the freedom to pick the axis later |
+| D14 | **v0.1 ships through a non-public channel** (Q10) | Whether TestFlight/internal testing or sideloaded dev builds is undecided, but neither needs a public listing | The store listing, screenshots and marketing assets stay out of v0.1 either way. FR-1.9, FR-1.10 and the privacy forms are still built in v0.1, since they gate the eventual listing and are expensive to retrofit |
+| D15 | **Deferred: the specific test-distribution channel** (Q10) | Undecided | Decide before v0.1 ships. TestFlight needs a paid Apple account and light review; free-account sideloading expires every 7 days and needs re-signing per device |
+| D16 | **E-mail and push behind a `Notifier` port** (Q11) | Portability (D3); volume is unknown | v0.1 wires a throwaway implementation (Expo push, any SMTP for magic links). The core depends on the port, never a vendor SDK (NFR-14). Swapping later is one adapter |
 | D8 | **Two-tier money precision** — high-precision derived values, integer minor units for anything payable | Rounding per expense lets one member absorb the odd cent repeatedly; keeping shares exact removes that drift entirely | Shares and balances are exact to 8 decimal places; rounding happens at exactly two boundaries, display and settlement (§5.1). Replaces the earlier "integer cents everywhere" rule |
 
 **Scale path implied by D3** (the shape this category of app takes): stateless API
@@ -297,7 +309,7 @@ the signup wall never blocks *other people's* expense entry.
 | FR-2.2 | M | Edit and soft-delete any entry; deletions are reversible and visible in history. |
 | FR-2.3 | M | Payer selectable from participants; **multiple payers** with explicit amounts (replaces `an wen?`). |
 | FR-2.4 | S | Category with icon (rent, groceries, fuel, tolls, parking, restaurant, activity, other) — derived from the sheet's actual rows. |
-| FR-2.5 | S | Attach one or more receipt photos, camera-first on mobile. |
+| FR-2.5 | S | Attach one or more receipt photos, camera-first on mobile. Client-side compression before upload; every receipt records `uploaded_at` for retention (FR-12.5). |
 | FR-2.6 | S | Allow a €0.00 entry as a placeholder to be filled in later; flag it as incomplete. |
 | FR-2.7 | S | Duplicate an entry ("same again"), and templates for recurring costs (fuel, tolls). |
 | FR-2.8 | C | Multi-currency: enter in local currency, store FX rate to base, show both. |
@@ -407,6 +419,23 @@ an entry whose shares do not sum to its total.
 
 ---
 
+### FR-12 Plans, entitlements and retention
+
+Consequence of D11–D13. The MVP builds the *mechanism*, not the commerce.
+
+| ID | Priority | Requirement |
+|---|---|---|
+| FR-12.1 | M | Every account carries a **plan**; every trip resolves an effective set of limits from its members' plans. v0.1 ships a single plan granting everything — the model exists, the restriction does not. |
+| FR-12.2 | M | All limit checks go through **one entitlement service**. No feature queries a plan directly, and no limit is special-cased in the domain layer — the gating axis is undecided (D13), so nothing may assume which limit matters. |
+| FR-12.3 | S | Receipt retention is a plan-derived attribute with a per-trip override (D11); default **12 months** after a trip closes. |
+| FR-12.4 | M | Each trip stores its retention setting, and each receipt its `uploaded_at`, from the first migration — so the purge job (FR-12.6) needs no backfill. |
+| FR-12.5 | S | Members are warned before receipts are purged, with time to export. |
+| FR-12.6 | C | The **purge job** itself: delete receipts past retention, log the deletion, keep the entry that referenced them intact. Deferred to v0.2 (D11); until it ships, storage grows without bound. |
+| FR-12.7 | C | Billing: in-app purchase on both stores (required for digital subscriptions — no external payment flow is permitted inside the app), subscription state, receipt validation, paywall UI. Deferred past v0.2 (D12). |
+| FR-12.8 | W | Any paywall, limit enforcement or upgrade prompt in v0.1. |
+
+---
+
 ## 7. Settlement algorithm specification
 
 Notation: `b_i` = balance of participant *i* in minor units. `b_i > 0` ⇒ *i* is
@@ -456,16 +485,16 @@ applying the plan drives every balance to exactly zero.
 | NFR-3 | Scale | **Multi-tenant schema from day one** (D5): no hardcoded participants, no single-group assumptions. Design target 20 participants and 5,000 entries per trip; correctness must hold to 10,000 trips without a schema change, though only this group's trip is operated at launch. |
 | NFR-4 | Availability | Best-effort hosting; offline read (FR-11.1) means an outage never blocks the trip. |
 | NFR-5 | Security | Trip data readable only by members; share links carry a high-entropy token, are revocable, and expire; all traffic over TLS. |
-| NFR-6 | Privacy / GDPR | Personal data limited to display name + optional e-mail; export and delete-my-data supported; receipts stored in a private bucket with signed, expiring URLs; EU hosting. |
+| NFR-6 | Privacy / GDPR | Personal data limited to display name + e-mail; export and delete-my-data supported (FR-1.9); receipts in a private bucket behind signed, expiring URLs; EU hosting. Retention: 12 months after a trip closes by default, configurable per trip, enforced by FR-12.6 once it ships. |
 | NFR-7 | Data integrity | Nightly backups, point-in-time restore; soft deletes; append-only audit log. |
-| NFR-8 | i18n / l10n | German and English UI; locale-aware number/date formatting (`€1.234,56` vs `€1,234.56`); currency symbol per trip. |
+| NFR-8 | i18n / l10n | **English source strings, German shipped from v0.1** (D10). No user-facing string hardcoded in a component; all text extracted from the first commit. Locale-aware number and date formatting (`€1.234,56` vs `€1,234.56`); currency symbol per trip. |
 | NFR-9 | Accessibility | WCAG 2.1 AA: don't encode meaning in colour alone (the sheet's green cells need an icon/label equivalent), touch targets ≥ 44 px, screen-reader labels. |
 | NFR-10 | Cost | Hostable for < €10/month at this group size. |
 | NFR-11 | Maintainability | Split/settlement logic in a pure, framework-free module with property-based tests: invariants I1–I4 and the precision rules P1–P6 expressed as properties over generated trips (random amounts, participant counts, split rules, refunds and transfers). This is the primary correctness net. |
 | NFR-12 | Observability | Error tracking + a daily invariant check alerting if any trip's balances don't sum to zero. |
 | NFR-13 | Testability | No spreadsheet-derived fixtures or import tooling (D7). Correctness is demonstrated by the property tests of NFR-11 plus worked unit cases for the known-hard splits (n-way indivisible amounts, refunds, mixed exact/equal, settlement residuals). CI fails on any invariant violation. |
 | NFR-14 | Portability | Hosting is deferred (D3), so three constraints are binding from the first commit: (a) `group_id` on every row; (b) no query, index or job that spans groups; (c) the domain layer imports no framework, ORM or vendor SDK. Managed auth and managed storage may be used at the edges, never inside the core. |
-| NFR-15 | Store compliance | App Store and Play requirements are release-blocking, not polish: privacy nutrition labels / Data Safety form, in-app account deletion (FR-1.9), Sign in with Apple parity (FR-1.10), a reachable privacy policy and support URL, and age rating. Budget review latency into every release. |
+| NFR-15 | Store compliance | Both stores at launch (D9). Release-blocking, not polish: privacy nutrition labels / Data Safety form, in-app account deletion (FR-1.9), Sign in with Apple parity (FR-1.10), a reachable privacy policy and support URL, age rating. Digital subscriptions must use in-app purchase on both platforms (15–30%), which constrains any future pricing (FR-12.7). Listing assets are deferred with the public launch (D14); the compliance items above are not. Budget review latency into every release. |
 
 ---
 
@@ -524,6 +553,15 @@ Shaped by D1 (stores), D2 (accounts), D3 (portability), D5 (multi-tenant).
   algorithms in a pure package with no framework, ORM or vendor import — shared
   by client and server, covered by property tests over the invariants and the
   precision rules (NFR-11).
+- **Notifications:** a `Notifier` port (send-email, send-push) with a throwaway
+  v0.1 adapter — Expo push, any SMTP for magic links (D16). No provider SDK
+  reaches the core.
+- **i18n:** string catalogue from the first commit, English source, German
+  shipped (D10). A lint rule fails the build on a user-facing literal in a
+  component.
+- **Entitlements:** one service resolving a plan to a named set of limits
+  (FR-12.1–12.2). v0.1 has a single all-permitting plan; nothing downstream knows
+  which limit will eventually matter (D13).
 - **Deferred by D3:** the concrete host. Any managed Postgres, any object store
   with signed URLs, any CDN. The core must not learn their names.
 
@@ -534,19 +572,25 @@ Shaped by D1 (stores), D2 (accounts), D3 (portability), D5 (multi-tenant).
 **v0.1 MVP — "replaces the sheet for one trip"**
 FR-1.1–1.3, FR-1.9–1.10, FR-2.1–2.3, FR-3.1–3.4, FR-3.6, FR-4.1, FR-5.1–5.2,
 FR-7.1–7.3, FR-8.2, FR-8.3, FR-8.6, FR-9.1–9.3, FR-9.6, FR-10.1, FR-11.1,
-NFR-11, NFR-13–15.
+FR-12.1–12.2, FR-12.4, NFR-8, NFR-11, NFR-13–15.
 *Exit criteria:* (a) the property suite (NFR-11) passes, including the precision
 rules P1–P6; (b) the five of you run a whole trip in it without opening a
 spreadsheet.
 
-*Distribution note:* v0.1 does not need a public store listing. Ship it to the
-group through **TestFlight** and Play **internal testing**, which skips full
-review and lets you iterate mid-trip. The public listing (NFR-15) is a v0.3
-concern — but FR-1.9, FR-1.10 and the privacy forms are built in v0.1 anyway,
-because retrofitting auth and deletion is expensive.
+*Distribution note:* v0.1 needs no public store listing (D14). The channel —
+TestFlight plus Play internal testing, or sideloaded dev builds — is still open
+(D15) and must be settled before v0.1 ships; TestFlight needs a paid Apple
+account and light review, free-account sideloading expires every 7 days per
+device. Either way the listing and marketing assets wait for v0.3, while FR-1.9,
+FR-1.10 and the privacy forms are built in v0.1 regardless, because retrofitting
+auth and deletion is expensive.
+
+*Also in v0.1 because retrofitting is expensive:* i18n extraction with German
+shipped (D10), the entitlement service (D12), and retention metadata (D11) —
+each of them cheap now and invasive later.
 
 **v0.2 — "pleasant"**
-Categories, receipts, per-share settled status (FR-7.4), gross matrix (FR-8.1),
+Receipt purge job (FR-12.6), categories, receipts, per-share settled status (FR-7.4), gross matrix (FR-8.1),
 preferred-creditor routing (FR-8.5), tips (FR-3.7), weights/percentages
 (FR-3.5), ledger filters + drill-down, adjustments (FR-6), audit trail
 (FR-10.2), offline write (FR-11.2), export (FR-7.8), German/English (NFR-8).
@@ -555,7 +599,8 @@ preferred-creditor routing (FR-8.5), tips (FR-3.7), weights/percentages
 Statistics, payment deep links (FR-5.5), push notifications, comments,
 multi-currency (FR-2.8), instalments (FR-2.10), split presets, plus the public
 launch scaffolding deferred in §1.2: onboarding, empty states, privacy policy,
-support URL, store listing assets, crash reporting.
+support URL, store listing assets, crash reporting. Billing and in-app purchase
+(FR-12.7) only once the gating axis is decided (D13).
 
 **Later / evaluate**
 Receipt OCR, itemized splits, sub-group presets, monetisation.
@@ -564,17 +609,19 @@ Receipt OCR, itemized splits, sub-group presets, monetisation.
 
 ## 12. Open questions
 
-Q1–Q8 from the v1.0 draft are resolved in §1.3. Remaining, none of them
-blocking the MVP:
+All questions raised in the v1.0 and v1.1 drafts are now either answered or
+consciously deferred; §1.3 records both. Nothing here blocks *starting* the MVP.
+One item, Q10, blocks *shipping* it.
 
-| # | Question | Impact | Proposed default |
-|---|---|---|---|
-| Q9 | Both stores at once, or iOS first? | Release effort | Both — Expo makes the second target cheap |
-| Q10 | Does the group test via TestFlight/internal testing before any public listing? | v0.1 scope | Yes, per §11 |
-| Q11 | Which e-mail/push provider, given D3 portability? | Vendor choice, cost | Defer; keep behind an interface |
-| Q12 | Data retention for receipts — how long after a trip closes? | GDPR, storage cost | 24 months, then purge; configurable |
-| Q13 | If this does become a product, free or paid? | Later architecture (billing, limits) | Out of scope now; nothing in the schema should assume free |
-| Q14 | Do you want a German-first UI, or English-first with German as a translation? | Copywriting effort | English source, German translation (NFR-8) |
+| # | Question | Impact | Proposed default | State |
+|---|---|---|---|---|
+| Q12b | When does the purge job actually ship? | Storage cost grows until it does | v0.2 | Deferred (D11) |
+| Q15 | What does the paid tier gate — retention, storage volume, trip count? | Pricing, and eventually the limit checks | Retention or storage volume, since those track real cost | **Open** (D13) |
+| Q10 | TestFlight/internal testing, or sideloaded dev builds, for v0.1? | How your group installs it | TestFlight + Play internal | **Open** (D15), needed before v0.1 ships |
+| Q11b | Which providers, once volume is known? | Cost, deliverability | Decide at v0.3 | Deferred (D16) |
+| Q13b | Price point and free-tier shape, if it goes paid? | Revenue, IAP maths at 15–30% | Not before a real trip has run | Deferred (D12) |
+
+Answered questions Q1–Q9, Q11, Q12, Q14 are recorded in §1.3.
 
 ## 13. Risks
 
@@ -590,3 +637,7 @@ blocking the MVP:
 | Receipt storage cost/privacy | Cost, GDPR | Client-side compression, retention limit (Q12), signed URLs |
 | **Product ambition (D5) inflates the MVP** | Never ships — the doc's original top risk, now likelier | D5 is a schema and structure commitment only; every product-facing feature stays behind the §1.2 line until a real trip has run |
 | **Deferred hosting (D3) leaks vendor coupling into the core** | Portability lost silently | NFR-14 enforced by a lint rule banning vendor imports in the domain package |
+| **Receipt storage grows unbounded until the purge job ships (D11)** | Cost, and a weaker GDPR position in the meantime | Retention metadata captured from day one so the job is a pure addition; client-side compression from v0.1; watch the storage bill and pull FR-12.6 forward if it moves |
+| **Entitlement model built before the gating axis is known (D13)** | Over-abstraction — indirection serving a limit that never arrives | Keep it to a plan → named limits map and one service; no paywall, no limit enforcement, no UI until D13 resolves |
+| **IAP takes 15–30% of any subscription** | Undermines a storage-cost-recovery model | Know it before pricing (NFR-15); the margin has to clear both the store cut and the storage bill |
+| **Two review queues (D9) double the release friction** | Slower fixes once public | Over-the-air JS updates for non-native changes; the web build as an always-current escape hatch |
