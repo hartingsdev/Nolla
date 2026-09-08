@@ -1,0 +1,32 @@
+import { expect, test } from '@playwright/test';
+import { expectBalancesSumToZero, loadSample } from './helpers';
+
+test.beforeEach(async ({ page }) => { await loadSample(page); });
+
+test('fewest-transfers plan is minimal and clears to zero when every transfer is marked paid', async ({ page }) => {
+  await page.goto('/settle');
+  await expect(page.getByText('4 transfers · provably minimal')).toBeVisible();
+  await expect(page.getByText('Yannik pays Marc')).toBeVisible();
+  // rounding card names who absorbed the sub-cent residual
+  await expect(page.getByText(/under a cent/).first()).toBeVisible();
+  for (let i = 0; i < 4; i++) {
+    await page.getByRole('button', { name: 'Mark paid' }).first().click();
+  }
+  await expect(page.getByText('Everyone is settled.')).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByText('You are settled')).toBeVisible();
+  await page.goto('/ledger');
+  await expect(page.getByText('Payment', { exact: false }).first()).toBeVisible();
+  await expectBalancesSumToZero(page);
+});
+
+test('the three plan kinds are selectable and all show transfers', async ({ page }) => {
+  await page.goto('/settle');
+  await page.getByRole('button', { name: 'Pay who you owe' }).click();
+  await expect(page.getByText(/\d+ transfers?$/).first()).toBeVisible();
+  await page.getByRole('button', { name: /^Via / }).click();
+  await page.getByRole('button', { name: 'Robert', exact: true }).click();
+  await expect(page.getByText(/pays Robert|Robert pays/).first()).toBeVisible();
+  const rows = await page.getByText(/ pays /).allInnerTexts();
+  expect(rows.every((r) => r.includes('Robert'))).toBe(true);
+});

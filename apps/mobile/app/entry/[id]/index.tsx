@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { roundAll } from '@vst/domain';
 import { formatDate, formatMoney, formatPrecise } from '../../../src/format';
+import { useDismiss } from '../../../src/nav';
 import { useEntries, useNames, useWriteRules } from '../../../src/selectors';
 import { useStore } from '../../../src/store';
 import { useTheme } from '../../../src/theme';
@@ -13,6 +14,7 @@ export default function EntryDetail() {
   const { t, i18n } = useTranslation();
   const th = useTheme();
   const router = useRouter();
+  const dismiss = useDismiss();
   const entries = useEntries();
   const names = useNames();
   const deleteEntry = useStore((s) => s.deleteEntry);
@@ -24,7 +26,7 @@ export default function EntryDetail() {
 
   const shown = roundAll(e.shares.map((s) => s.amount), e.amount, e.id);
   const remove = () => {
-    const doIt = () => { deleteEntry(e.id); router.back(); };
+    const doIt = () => { deleteEntry(e.id); dismiss(); };
     if (Platform.OS === 'web') { if (globalThis.confirm(t('entry.confirmDelete'))) doIt(); return; }
     Alert.alert(t('entry.confirmDelete'), undefined, [{ text: t('entry.cancel'), style: 'cancel' }, { text: t('entry.delete'), style: 'destructive', onPress: doIt }]);
   };

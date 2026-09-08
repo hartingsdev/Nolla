@@ -142,6 +142,13 @@ describe('roundAll — the Precise → Money boundary (P3, P4)', () => {
     expect(shortCount.every((c) => c > 0)).toBe(true);
   });
 
+  it('sub-cent leftovers round to all zeros — no phantom cent after settling', () => {
+    const v = [precise(400000n, EUR), precise(600000n, EUR), precise(-400000n, EUR), precise(-600000n, EUR)]; // +0.004 +0.006 −0.004 −0.006 €
+    for (const seed of ['a', 'b', 'c', 'trip', 'x1']) {
+      expect(roundAll(v, money(0n, EUR), seed).map((m) => m.minor)).toEqual([0n, 0n, 0n, 0n]);
+    }
+  });
+
   it('handles a zero-sum vector (the settlement case), negatives included', () => {
     const v = [precise(1103600000n, EUR), precise(-551800000n, EUR), precise(-551800000n, EUR)];
     const out = roundAll(v, money(0n, EUR), 's');

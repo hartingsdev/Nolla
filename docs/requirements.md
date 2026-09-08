@@ -1,9 +1,11 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.4** · Owner: project team · Date: 2026-09-08
+Status: **Draft v1.5** · Owner: project team · Date: 2026-09-08
 
 **Changelog**
 
+- v1.5 — P4 tightened to truncate-then-largest-remainder after a UI test
+  surfaced a phantom one-cent transfer following full settlement.
 - v1.4 — exact settlement search raised to n ≤ 16 with the O(2ⁿ·n) DP
   documented in [architecture.md](architecture.md) §4.4.
 - v1.3 — review pass: explicit `Participant` entity (placeholders, claiming,
@@ -281,9 +283,12 @@ which is used where:
   storage or in intermediate arithmetic.
 - **P3** — Rounding happens at exactly two boundaries: **display** and
   **settlement-plan generation**. Nowhere else.
-- **P4** — At each boundary, allocate with largest remainder so the rounded set
-  sums exactly to the rounded total. The residual is assigned deterministically
-  and shown, never silently dropped.
+- **P4** — At each boundary, truncate every value toward zero, then hand the
+  residual units to the entries with the largest discarded remainder, so the
+  rounded set sums exactly to the total. Truncating (not nearest, not floor) is
+  what keeps P7 true: a vector of sub-unit leftovers rounds to all zeros, so no
+  phantom cent is ever proposed after everyone has paid. The residual is
+  assigned deterministically and shown, never silently dropped.
 - **P5** — 8 dp is not exact for every split (100 ÷ 3 = 33.33333333 × 3 =
   99.99999999). The residual is 10⁻⁸ instead of a cent, and P4 still applies. If
   bit-exactness is ever required, the fallback is to store the split *rule*

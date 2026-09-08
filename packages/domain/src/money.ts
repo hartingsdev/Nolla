@@ -147,11 +147,19 @@ export function seedIndex(seed: string, n: number): number {
 
 /**
  * Round a set of Precise values to Money so that the results sum EXACTLY to
- * `total`. Largest-remainder allocation: floor every value to minor units,
- * then hand the remaining units to the entries with the largest fractional
- * parts. Ties are broken in stable index order starting at
- * `seedIndex(seed, n)`, so the same participant does not always absorb the
- * extra unit (P4).
+ * `total` (P4). Each value is first TRUNCATED toward zero to a minor unit; the
+ * residual between that and `total` is then corrected one unit at a time on
+ * the entries whose truncation discarded the most (largest remainder). Ties
+ * are broken in stable index order starting at `seedIndex(seed, n)`, so the
+ * same participant does not always absorb the extra unit.
+ *
+ * Truncating (rather than rounding to nearest, or flooring) is what makes P7
+ * hold at the boundary: a vector of sub-unit leftovers such as
+ * [+0.004, +0.006, −0.004, −0.006] rounds to all zeros, so no phantom cent is
+ * ever proposed as a debt after everyone has paid. Nearest rounding would give
+ * [0, +1, 0, −1]; floor-based largest remainder can too.
+ *
+ * Every result differs from its input by less than one minor unit.
  *
  * Precondition: Σ values == toPrecise(total). This is an invariant of the
  * callers (allocate guarantees it for shares; balances sum to zero for
@@ -170,34 +178,38 @@ export function roundAll(values: readonly Precise[], total: Money, seed: string)
     throw new DomainError('ROUND_SUM_MISMATCH', `Σ values (${preciseToString(sum)}) != total (${moneyToString(total)})`);
   }
 
-  const floors: bigint[] = new Array<bigint>(n);
-  const rems: bigint[] = new Array<bigint>(n);
-  let floorSum = 0n;
+  // Truncate toward zero; keep the discarded remainder (value − truncated), which has the value's sign.
+  const rounded: bigint[] = new Array<bigint>(n);
+  const err: bigint[] = new Array<bigint>(n);
+  let roundedSum = 0n;
   for (let i = 0; i < n; i++) {
-    const v = values[i] as Precise;
-    floors[i] = floorDiv(v.scaled, f);
-    rems[i] = floorMod(v.scaled, f);
-    floorSum += floors[i] as bigint;
+    const v = (values[i] as Precise).scaled;
+    const m = v / f; // bigint division truncates toward zero
+    rounded[i] = m;
+    err[i] = v - m * f;
+    roundedSum += m;
   }
-  // Units still to hand out: 0 ≤ residual < n, because every remainder is < f.
-  let residual = total.minor - floorSum;
+  const residual = total.minor - roundedSum; // units still to add (>0) or remove (<0)
+  if (residual === 0n) return rounded.map((m) => money(m, ccy));
 
-  // Order: larger remainder first; among equals, rotated stable index order.
   const start = seedIndex(seed, n);
+  const rot = (i: number) => (i - start + n) % n;
+  const dir = residual > 0n ? 1n : -1n;
+  // Candidates: entries whose error points in the direction we must move (most under-rounded first
+  // when adding, most over-rounded first when removing).
   const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => {
-    const ra = rems[a] as bigint;
-    const rb = rems[b] as bigint;
-    if (ra !== rb) return ra > rb ? -1 : 1;
-    return ((a - start + n) % n) - ((b - start + n) % n);
+    const ea = (err[a] as bigint) * dir;
+    const eb = (err[b] as bigint) * dir;
+    if (ea !== eb) return ea > eb ? -1 : 1;
+    return rot(a) - rot(b);
   });
-
-  const out = floors.map((fl) => money(fl, ccy));
+  let left = residual < 0n ? -residual : residual;
   for (const i of order) {
-    if (residual <= 0n) break;
-    out[i] = money((floors[i] as bigint) + 1n, ccy);
-    residual -= 1n;
+    if (left === 0n) break;
+    rounded[i] = (rounded[i] as bigint) + dir;
+    left -= 1n;
   }
-  return out;
+  return rounded.map((m) => money(m, ccy));
 }
 
 // ---------------------------------------------------------------------------

@@ -142,6 +142,26 @@ describe('settle — rounding boundary (P3/P4/FR-9.6)', () => {
   });
 });
 
+describe('settle — applying the plan really finishes the trip', () => {
+  it('after recording every transfer of the plan, a fresh plan has no transfers', () => {
+    fc.assert(fc.property(arbLedger(EUR, { maxParticipants: 7, maxEntries: 30 }), fc.constantFrom('optimal', 'hub', 'bilateral'), ({ ccy, entries }, kind) => {
+      const bal = balances(entries, ccy);
+      const ids = [...bal.keys()];
+      if (ids.length === 0) return;
+      const opts = kind === 'bilateral' ? { kind, matrix: grossMatrix(entries, ccy) } as const : kind === 'hub' ? { kind, hub: ids[0]! } as const : { kind } as const;
+      const plan = settle(bal, ccy, opts, 'trip');
+      const paid = plan.transfers.map((t, i) => ({
+        id: `pay${String(i)}`, type: 'transfer' as const, amount: t.amount, date: '2026-08-01' as never,
+        payments: [{ participantId: t.from, amount: t.amount }], shares: [{ participantId: t.to, amount: toPrecise(t.amount) }],
+      }));
+      const after = balances([...entries, ...paid], ccy);
+      const plan2 = settle(after, ccy, { kind: 'optimal' }, 'trip');
+      expect(plan2.transfers).toHaveLength(0);
+      for (const v of plan2.balances.values()) expect(v.minor).toBe(0n);
+    }), { numRuns: 300 });
+  });
+});
+
 describe('settle — bilateral on random ledgers', () => {
   it('nets pairs, is sound, and pays the person actually owed', () => {
     fc.assert(fc.property(arbLedger(EUR, { maxParticipants: 6, maxEntries: 25 }), ({ ccy, entries }) => {

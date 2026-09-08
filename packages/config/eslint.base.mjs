@@ -41,7 +41,7 @@ export const base = tseslint.config(
   },
   {
     // Tests may use `!` on values they just constructed.
-    files: ['**/*.test.ts', '**/testing/**'],
+    files: ['**/*.test.ts', '**/testing/**', '**/e2e/**'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.config.*'] },

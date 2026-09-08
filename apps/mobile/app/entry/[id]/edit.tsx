@@ -1,7 +1,8 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { entryToWire } from '@vst/domain';
 import { EntryForm } from '../../../src/components/EntryForm';
+import { useDismiss } from '../../../src/nav';
 import { useEntries, useWriteRules } from '../../../src/selectors';
 import { useStore } from '../../../src/store';
 import { Body, Screen } from '../../../src/components/ui';
@@ -9,7 +10,7 @@ import { Body, Screen } from '../../../src/components/ui';
 export default function EditEntry() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
-  const router = useRouter();
+  const dismiss = useDismiss();
   const entries = useEntries();
   const updateEntry = useStore((s) => s.updateEntry);
   const rules = useWriteRules();
@@ -19,7 +20,7 @@ export default function EditEntry() {
   return (
     <>
       <Stack.Screen options={{ title: t('entry.edit') }} />
-      <EntryForm initial={e} allowed={['expense', 'transfer']} onSave={(n) => { updateEntry(entryToWire(n)); router.back(); }} onCancel={() => { router.back(); }} />
+      <EntryForm initial={e} allowed={['expense', 'transfer']} onSave={(n) => { updateEntry(entryToWire(n)); dismiss(); }} onCancel={dismiss} />
     </>
   );
 }

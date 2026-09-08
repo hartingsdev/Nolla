@@ -37,6 +37,7 @@ pnpm install            # Node 22, pnpm 10 (see .nvmrc / packageManager)
 pnpm check              # lint + typecheck + test, what CI runs
 pnpm --filter @vst/domain test:watch
 pnpm --filter @vst/mobile web         # the app in a browser (Expo web)
+pnpm --filter @vst/mobile e2e         # UI click tests: exports the web build, serves it, runs Playwright
 pnpm --filter @vst/mobile start       # Expo dev server for iOS/Android (Expo Go or a dev build)
 docker compose up -d    # postgres, minio, mailpit for local API work (from M3 on)
 ```
@@ -44,6 +45,11 @@ docker compose up -d    # postgres, minio, mailpit for local API work (from M3 o
 Layout follows [docs/architecture.md](docs/architecture.md) §3. `packages/domain`
 is pure: the import boundary (no framework, ORM, vendor SDK, Node I/O, ambient
 clock or float conversion) is enforced by ESLint and fails the build.
+
+Three layers of tests: property tests on the domain (money, splits, settlement),
+catalogue tests on i18n, and Playwright click tests against the exported web
+build (`apps/mobile/e2e`), which assert what the user sees — including that the
+displayed balances always sum to zero. CI runs all three on every push.
 
 ## Progress
 
