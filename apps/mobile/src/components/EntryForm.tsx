@@ -52,10 +52,13 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
     initial?.type === 'expense' && initial.payments.length > 1 ? Object.fromEntries(initial.payments.map((p) => [p.participantId, plain(p.amount)])) : {});
   const [among, setAmong] = useState<Set<string>>(() => new Set(initial?.type === 'expense' ? initial.shares.map((s) => s.participantId) : participants.map((p) => p.id)));
-  // Only equal and exact can be recovered from stored shares; a weighted entry
-  // reopens as the exact amounts it produced, which is lossless if not literal.
+  // An entry saved with its split intent (FR-3.5) reopens the way it was left.
+  // Older ones have only their shares, from which equal and exact can be told
+  // apart but weights and percentages cannot — those reopen as exact amounts,
+  // which is lossless if not literal.
   const [mode, setMode] = useState<Mode>(() => {
     if (initial?.type !== 'expense') return 'equal';
+    if (initial.split) return initial.split.rule.kind;
     const first = initial.shares[0]?.amount.scaled ?? 0n;
     return initial.shares.every((s) => { const d = s.amount.scaled - first; return d >= -1n && d <= 1n; }) ? 'equal' : 'exact';
   });
@@ -64,10 +67,17 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     const shown = roundAll(initial.shares.map((s) => s.amount), initial.amount, initial.id);
     return Object.fromEntries(initial.shares.map((s, i) => [s.participantId, plain(shown[i] ?? zeroMoney(ccy))]));
   });
+  /** The rule this entry was saved with, when it recorded one (FR-3.5). */
+  const savedRule = initial?.type === 'expense' ? initial.split?.rule : undefined;
   /** Per-person tip carved out of the amount (FR-3.7, the sheet's `Trinkgeld p.P.`). */
-  const [tipRaw, setTipRaw] = useState('');
-  const [weights, setWeights] = useState<Record<string, string>>({});
-  const [percents, setPercents] = useState<Record<string, string>>({});
+  const [tipRaw, setTipRaw] = useState(() => {
+    const first = initial?.type === 'expense' ? initial.split?.surcharges?.[0] : undefined;
+    return first ? plain(first.amount) : '';
+  });
+  const [weights, setWeights] = useState<Record<string, string>>(() =>
+    savedRule?.kind === 'weights' ? Object.fromEntries(Object.entries(savedRule.weights).map(([id, w]) => [id, w.toString()])) : {});
+  const [percents, setPercents] = useState<Record<string, string>>(() =>
+    savedRule?.kind === 'percent' ? Object.fromEntries(Object.entries(savedRule.bps).map(([id, b]) => [id, bpsToText(b, locale)])) : {});
   // transfer
   const [from, setFrom] = useState<string | null>(initial && initial.type !== 'expense' ? initial.payments[0]?.participantId ?? null : meId);
   const [to, setTo] = useState<string | null>(initial && initial.type !== 'expense' ? initial.shares[0]?.participantId ?? null : null);
@@ -159,7 +169,13 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         if (mode === 'percent' && bpsResidual !== 0n) { setError(t('entry.invalid.percent')); return; }
         if (!rule) { setError(t('entry.invalid.split')); return; }
         if (tipTooBig) { setError(t('entry.invalid.tip')); return; }
-        entry = { id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments, shares: allocate(amount, rule, { seed: id, surcharges }), createdAt, deleted: false, ...(category ? { category } : {}) };
+        entry = {
+          id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments,
+          shares: allocate(amount, rule, { seed: id, surcharges }),
+          // Kept so reopening restores the split rather than guessing at it (FR-3.5).
+          split: { rule, ...(surcharges.length ? { surcharges } : {}) },
+          createdAt, deleted: false, ...(category ? { category } : {}),
+        };
       }
       validateEntry(entry);
       onSave(entry);

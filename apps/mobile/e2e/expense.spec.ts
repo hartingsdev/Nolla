@@ -162,3 +162,51 @@ test('a tip only reaches the people in the split, and cannot exceed the amount',
   await expect(page.getByText('The tip is larger than the amount')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
 });
+
+test('a share split reopens as shares and re-applies to a new total (FR-3.5)', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('90');
+  await page.getByLabel('Description').first().fill('Ferienhaus');
+  await setPayer(page, 'Marc');
+  await page.getByRole('button', { name: 'By shares' }).click();
+  await page.getByLabel('Yannik', { exact: true }).fill('2');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // Reopening restores the rule, not the amounts it produced: a weight, not €30.00.
+  await page.goto('/ledger');
+  await page.getByText('Ferienhaus').first().click();
+  await page.getByRole('button', { name: 'Edit entry' }).click();
+  await expect(page.getByLabel('Yannik', { exact: true })).toHaveValue('2');
+  await expect(page.getByLabel('Max', { exact: true })).toHaveValue('1');
+
+  // Change the total and the shares follow the rule instead of staying put.
+  await page.getByLabel('Amount').first().fill('120');
+  await expect(page.getByText('€40.00')).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await page.getByText('Ferienhaus').first().click();
+  await expect(page.getByText('€40.00').first()).toBeVisible();
+  expect(await page.getByText(/^€20\.00$/).count()).toBe(4);
+  await expectBalancesSumToZero(page);
+});
+
+test('a tip survives reopening, so an edit cannot silently redistribute it (FR-3.7)', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('120');
+  await page.getByLabel('Description').first().fill('Weinstube');
+  await setPayer(page, 'Marc');
+  await page.getByLabel('Tip per person', { exact: true }).fill('4');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await page.goto('/ledger');
+  await page.getByText('Weinstube').first().click();
+  await page.getByRole('button', { name: 'Edit entry' }).click();
+  await expect(page.getByLabel('Tip per person', { exact: true })).toHaveValue('4.00');   // the UI is en-US here, so a decimal point
+  await expect(page.getByText('€24.00 per person')).toBeVisible();
+  // Saving again with nothing changed must produce the very same shares.
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await page.getByText('Weinstube').first().click();
+  expect(await page.getByText(/^€24\.00$/).count()).toBe(5);
+  await expectBalancesSumToZero(page);
+});

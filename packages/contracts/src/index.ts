@@ -18,6 +18,22 @@ export const planKind = z.enum(['bilateral', 'optimal', 'hub']);
 
 export const wirePayment = z.object({ participantId: uuid, amount: moneyString });
 export const wireShare = z.object({ participantId: uuid, amount: preciseString, settledBy: uuid.optional() });
+/** Non-negative integer as a decimal string: weights and basis points (P6 — JSON has no bigint). */
+const bigintString = z.string().regex(/^\d{1,20}$/, 'must be a non-negative integer string');
+const participantMap = <T extends z.ZodType>(v: T) => z.record(uuid, v);
+
+/** How the entry was split, kept next to the shares it produced (FR-3.5, FR-3.7). */
+export const wireSplitRule = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('equal'), among: z.array(uuid).min(1).max(100) }),
+  z.object({ kind: z.literal('weights'), weights: participantMap(bigintString) }),
+  z.object({ kind: z.literal('percent'), bps: participantMap(bigintString) }),
+  z.object({ kind: z.literal('exact'), amounts: participantMap(moneyString) }),
+]);
+export const wireSplit = z.object({
+  rule: wireSplitRule,
+  surcharges: z.array(z.object({ participantId: uuid, amount: moneyString })).max(100).optional(),
+});
+
 export const wireEntry = z.object({
   id: uuid,
   type: entryType,
@@ -29,6 +45,7 @@ export const wireEntry = z.object({
   shares: z.array(wireShare).min(1).max(100),
   reason: z.string().max(500).optional(),
   category: z.string().max(40).optional(),
+  split: wireSplit.optional(),
   createdAt: isoInstant,
   deleted: z.boolean().optional(),
 });

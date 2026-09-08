@@ -4,8 +4,30 @@
  */
 import { type LedgerEntry, type Payment } from './ledger';
 import { type Currency, currency, moneyFromString, moneyToString, preciseFromString, preciseToString } from './money';
-import { type ParticipantId, type Share } from './split';
+import { type ParticipantId, type Share, type SplitRule, type Surcharge } from './split';
 import { localDate } from './ports';
+
+/**
+ * How an entry was split, kept alongside the shares it produced (FR-3.5, FR-3.7).
+ *
+ * The shares alone cannot say whether "€30 each" was an equal split, a 1:1:1
+ * weighting or three typed amounts — so reopening an entry used to guess, and
+ * always guessed "exact". Storing the intent lets the form come back the way it
+ * was left, and lets an edit re-apply the rule to a new total.
+ *
+ * Weights and basis points are decimal strings for the same reason money is:
+ * JSON has no integers of arbitrary size (P6).
+ */
+export type WireSplitRule =
+  | { readonly kind: 'equal'; readonly among: readonly string[] }
+  | { readonly kind: 'weights'; readonly weights: Readonly<Record<string, string>> }
+  | { readonly kind: 'percent'; readonly bps: Readonly<Record<string, string>> }
+  | { readonly kind: 'exact'; readonly amounts: Readonly<Record<string, string>> };
+
+export interface WireSurcharge { readonly participantId: string; readonly amount: string }
+
+/** The rule plus anything added per person on top of it — everything `allocate` needs. */
+export interface WireSplit { readonly rule: WireSplitRule; readonly surcharges?: readonly WireSurcharge[] }
 
 export interface WirePayment { readonly participantId: string; readonly amount: string }
 export interface WireShare { readonly participantId: string; readonly amount: string; /** id of the transfer that settled this share (FR-7.4, P7) */ readonly settledBy?: string }
@@ -20,6 +42,8 @@ export interface WireEntry {
   readonly shares: readonly WireShare[];
   readonly reason?: string;
   readonly category?: string;
+  /** Present when the client recorded how it split; absent on older entries. */
+  readonly split?: WireSplit;
   readonly createdAt: string;
   readonly deleted?: boolean;
 }
@@ -29,8 +53,30 @@ export interface Entry extends LedgerEntry {
   readonly description: string;
   readonly createdAt: string;
   readonly category?: string;
+  readonly split?: { readonly rule: SplitRule; readonly surcharges?: readonly Surcharge[] };
   /** participantId → id of the transfer that settled that share */
   readonly settled?: Readonly<Record<string, string>>;
+}
+
+const mapValues = <A, B>(o: Readonly<Record<string, A>>, f: (a: A) => B): Record<string, B> =>
+  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, f(v)]));
+
+export function splitRuleToWire(r: SplitRule): WireSplitRule {
+  switch (r.kind) {
+    case 'equal': return { kind: 'equal', among: [...r.among] };
+    case 'weights': return { kind: 'weights', weights: mapValues(r.weights, (w) => w.toString()) };
+    case 'percent': return { kind: 'percent', bps: mapValues(r.bps, (b) => b.toString()) };
+    case 'exact': return { kind: 'exact', amounts: mapValues(r.amounts, moneyToString) };
+  }
+}
+
+export function splitRuleFromWire(w: WireSplitRule, ccy: Currency): SplitRule {
+  switch (w.kind) {
+    case 'equal': return { kind: 'equal', among: w.among as ParticipantId[] };
+    case 'weights': return { kind: 'weights', weights: mapValues(w.weights, BigInt) };
+    case 'percent': return { kind: 'percent', bps: mapValues(w.bps, BigInt) };
+    case 'exact': return { kind: 'exact', amounts: mapValues(w.amounts, (a) => moneyFromString(a, ccy)) };
+  }
 }
 
 export function entryToWire(e: Entry): WireEntry {
@@ -41,6 +87,10 @@ export function entryToWire(e: Entry): WireEntry {
     shares: e.shares.map((s) => ({ participantId: s.participantId, amount: preciseToString(s.amount), ...(e.settled?.[s.participantId] ? { settledBy: e.settled[s.participantId] } : {}) })),
     ...(e.reason !== undefined ? { reason: e.reason } : {}),
     ...(e.category !== undefined ? { category: e.category } : {}),
+    ...(e.split ? { split: {
+      rule: splitRuleToWire(e.split.rule),
+      ...(e.split.surcharges?.length ? { surcharges: e.split.surcharges.map((x) => ({ participantId: x.participantId, amount: moneyToString(x.amount) })) } : {}),
+    } } : {}),
     createdAt: e.createdAt,
     ...(e.deleted ? { deleted: true } : {}),
   };
@@ -57,6 +107,10 @@ export function entryFromWire(w: WireEntry): Entry {
     payments, shares,
     ...(w.reason !== undefined ? { reason: w.reason } : {}),
     ...(w.category !== undefined ? { category: w.category } : {}),
+    ...(w.split ? { split: {
+      rule: splitRuleFromWire(w.split.rule, ccy),
+      ...(w.split.surcharges?.length ? { surcharges: w.split.surcharges.map((x) => ({ participantId: x.participantId as ParticipantId, amount: moneyFromString(x.amount, ccy) })) } : {}),
+    } } : {}),
     ...(settledPairs.length ? { settled: Object.fromEntries(settledPairs) } : {}),
     createdAt: w.createdAt,
     ...(w.deleted ? { deleted: true } : {}),

@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, inArray } from 'drizzle-orm';
-import { type WireEntry, currency, entryFromWire, validateEntry } from '@vst/domain';
+import { type WireEntry, type WireSplit, currency, entryFromWire, validateEntry } from '@vst/domain';
 import { type Db } from '../db';
 import { ConflictError, NotFoundError } from '../errors';
 import { entries, entryHistory, payments, shares, users } from '../schema';
@@ -66,6 +66,7 @@ export function toRecord(e: EntryRow, ps: readonly PaymentRow[], ss: readonly Sh
     shares: ss.map((s) => ({ participantId: s.participantId, amount: normalisePrecise(s.amount), ...(s.settledByEntry ? { settledBy: s.settledByEntry } : {}) })),
     ...(e.reason !== null ? { reason: e.reason } : {}),
     ...(e.category !== null ? { category: e.category } : {}),
+    ...(e.splitRule !== null ? { split: e.splitRule as WireSplit } : {}),
     createdAt: e.createdAt.toISOString(),
     ...(e.deletedAt ? { deleted: true } : {}),
     version: e.version, seq: e.seq, updatedAt: e.updatedAt.toISOString(),
@@ -129,7 +130,7 @@ export const entryRepo = {
       await tx.insert(entries).values({
         id: wire.id, tripId, type: wire.type, description: wire.description,
         amountMinor: stringToMinor(wire.amount, ccy.exponent), ccy: ccy.code, ccyExponent: ccy.exponent,
-        date: wire.date, category: wire.category ?? null, reason: wire.reason ?? null, seq, createdBy: actor,
+        date: wire.date, category: wire.category ?? null, reason: wire.reason ?? null, splitRule: wire.split ?? null, seq, createdBy: actor,
         createdAt: new Date(wire.createdAt), deletedAt: wire.deleted ? new Date() : null,
       });
       await writeChildren(tx, tripId, wire, ccy.exponent);
@@ -150,7 +151,7 @@ export const entryRepo = {
       await tx.insert(entryHistory).values({ entryId: wire.id, tripId, version: current.version, actor, snapshot: snapshot(current) });
       await tx.update(entries).set({
         type: wire.type, description: wire.description, amountMinor: stringToMinor(wire.amount, ccy.exponent), ccy: ccy.code, ccyExponent: ccy.exponent,
-        date: wire.date, category: wire.category ?? null, reason: wire.reason ?? null, version: current.version + 1, seq, updatedAt: new Date(),
+        date: wire.date, category: wire.category ?? null, reason: wire.reason ?? null, splitRule: wire.split ?? null, version: current.version + 1, seq, updatedAt: new Date(),
         deletedAt: wire.deleted ? new Date() : null,
       }).where(and(eq(entries.id, wire.id), eq(entries.version, expectedVersion)));
       await tx.delete(payments).where(eq(payments.entryId, wire.id));

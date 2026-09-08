@@ -228,6 +228,24 @@ adjustments):
 - `[+2,+3,−4,−5,+4]` and the other known-hard cases as fixed unit tests
   (NFR-13).
 
+### 4.6a Split intent
+
+Shares alone cannot say how they were arrived at: €30 each might be an equal
+split, a 1:1:1 weighting, or three typed amounts. The entry therefore carries
+the rule that produced them, plus any per-person surcharge, in `entries.split_rule`
+— a column present since M3 and unused until now, so no migration.
+
+This is what lets an edit re-apply the rule to a new total instead of freezing
+the old amounts, and it is why the tip is stored with it: restoring a weighting
+without its tip would fold the tip into the base on the next save and move money
+that nobody touched. The property that keeps this honest is
+`allocate(amount, split.rule, { surcharges }) == shares`, tested for every rule kind.
+
+Weights and basis points are decimal strings on the wire, for the same reason
+money is (P6): JSON has no integers of arbitrary size. The field is optional —
+entries written before it existed simply have none, and the form falls back to
+telling equal from exact by looking at the shares.
+
 ### 4.7 Export
 
 `tripCsv` (FR-7.8) turns a trip into the shape of the sheet it replaces: one row
