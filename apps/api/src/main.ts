@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { connect, migrate } from '@vst/persistence';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp, createMetricsApp } from './app.ts';
@@ -19,7 +20,10 @@ function env(name: string, fallback?: string): string {
 const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 const conn = connect(env('DATABASE_URL'));
-await migrate(conn, join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'packages', 'persistence', 'migrations'));
+// Repo layout: apps/api/src/main.ts → ../../../packages/persistence/migrations. Bundled: /app/main.mjs → ./packages/persistence/migrations.
+const here = dirname(fileURLToPath(import.meta.url));
+const migrationsDir = process.env.MIGRATIONS_DIR ?? (existsSync(join(here, 'packages')) ? join(here, 'packages', 'persistence', 'migrations') : join(here, '..', '..', '..', 'packages', 'persistence', 'migrations'));
+await migrate(conn, migrationsDir);
 
 const metrics = promMetrics();
 const clock = systemClock;

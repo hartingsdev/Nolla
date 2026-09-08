@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "migrate": "node --experimental-strip-types scripts/migrate.ts",
-    "check-invariants": "node --experimental-strip-types scripts/check-invariants.ts"
+    "migrate": "tsx scripts/migrate.ts",
+    "check-invariants": "tsx scripts/check-invariants.ts"
   },
   "dependencies": {
     "@vst/domain": "workspace:*",
@@ -24,6 +24,7 @@
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.10",
     "fast-check": "^4.9.0",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "tsx": "^4.20.0"
   }
 }

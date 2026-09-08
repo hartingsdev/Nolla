@@ -52,6 +52,18 @@ jobs:
       - run: pnpm --filter @vst/persistence migrate && pnpm --filter @vst/persistence check-invariants
         env:
           DATABASE_URL: postgres://vst:vst@localhost:5432/vst
+      - name: Boot the bundled API against Postgres and probe health + metrics
+        run: |
+          pnpm --filter @vst/api build
+          (cd apps/api && node dist/main.mjs > /tmp/api.log 2>&1 &)
+          for i in $(seq 1 20); do curl -fsS localhost:8080/health && break; sleep 1; done
+          curl -fsS localhost:8080/health | grep -q '"ok":true'
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:9464/metrics)" = "401"
+          curl -fsS -H 'Authorization: Bearer ci-metrics' localhost:9464/metrics | grep -q '^vst_http_requests_total'
+          cat /tmp/api.log
+        env:
+          DATABASE_URL: postgres://vst:vst@localhost:5432/vst
+          METRICS_TOKEN: ci-metrics
 
   ui:
     name: UI click tests (Playwright, web build)

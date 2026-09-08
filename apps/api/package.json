@@ -7,8 +7,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "node --experimental-strip-types --watch src/main.ts",
-    "start": "node --experimental-strip-types src/main.ts"
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.mjs",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/main.mjs --external:pg-native --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\""
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
@@ -24,6 +25,8 @@
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.20.0"
   }
 }

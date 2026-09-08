@@ -41,7 +41,8 @@ pnpm --filter @vst/mobile e2e         # UI click tests: exports the web build, s
 pnpm --filter @vst/persistence test   # ledger schema tests on PGlite (in-process Postgres); set DATABASE_URL to use a real one
 pnpm --filter @vst/persistence migrate           # apply migrations/*.sql to DATABASE_URL
 pnpm --filter @vst/persistence check-invariants  # the nightly correctness job; exit 1 on any violation
-pnpm --filter @vst/api dev                       # the API on :8080 (+ metrics on :9464), needs DATABASE_URL
+pnpm --filter @vst/api dev                       # the API on :8080 (+ metrics on :9464) via tsx, needs DATABASE_URL
+pnpm --filter @vst/api build                     # esbuild → apps/api/dist/main.mjs, what the Dockerfile ships
 pnpm --filter @vst/api test                      # HTTP tests through app.request() on PGlite
 pnpm --filter @vst/mobile start       # Expo dev server for iOS/Android (Expo Go or a dev build)
 docker compose up -d    # postgres, minio, mailpit for local API work (from M3 on)
