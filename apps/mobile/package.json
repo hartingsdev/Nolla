@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "export:web": "expo export --platform web",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
     "test": "vitest run --passWithNoTests",
     "serve:dist": "node scripts/serve-dist.mjs dist 8787",
     "e2e": "EXPO_PUBLIC_API_URL=http://localhost:8090 expo export --platform web && playwright test",

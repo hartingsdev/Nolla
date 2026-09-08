@@ -38,8 +38,8 @@ test('a receipt is uploaded from the browser and shown on the entry', async ({ b
   await expect(page.getByText('Receipts', { exact: true })).toBeVisible();
 
   // a 1x1 PNG stands in for a photo; the file chooser is the same code path as the camera
-  const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-  const png = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+  // setFiles needs a Node Buffer, not a Uint8Array
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Choose from library' }).click();
   await (await chooser).setFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png });

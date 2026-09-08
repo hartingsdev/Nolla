@@ -7,8 +7,20 @@
     "noImplicitOverride": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["react", "react-native"]
+    "types": [
+      "react",
+      "react-native"
+    ]
   },
-  "include": ["app/**/*", "src/**/*", "e2e/**/*", "playwright.config.ts", "expo-env.d.ts", ".expo/types/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "app/**/*",
+    "src/**/*",
+    "expo-env.d.ts",
+    ".expo/types/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "e2e",
+    "node_modules"
+  ]
 }

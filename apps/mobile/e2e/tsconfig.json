@@ -1,0 +1,15 @@
+{
+  // The Playwright specs run in Node, unlike the app itself, so they get Node types
+  // here rather than adding "node" to the app's tsconfig and letting Buffer/process
+  // leak into screens.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true
+  },
+  "include": [".", "../playwright.config.ts"]
+}
