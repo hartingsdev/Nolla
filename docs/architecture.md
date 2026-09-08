@@ -242,9 +242,14 @@ that nobody touched. The property that keeps this honest is
 `allocate(amount, split.rule, { surcharges }) == shares`, tested for every rule kind.
 
 Weights and basis points are decimal strings on the wire, for the same reason
-money is (P6): JSON has no integers of arbitrary size. The field is optional —
-entries written before it existed simply have none, and the form falls back to
-telling equal from exact by looking at the shares.
+money is (P6): JSON has no integers of arbitrary size. They travel as **ordered
+arrays, not maps** — `allocate` walks a rule in key order and `roundAll`'s
+tie-break is positional, while `jsonb` reorders object keys as it pleases, so a
+map let a round-trip through the database hand the residual cent to a different
+person. The database test that re-applies a stored rule is what caught it.
+
+The field is optional — entries written before it existed simply have none, and
+the form falls back to telling equal from exact by looking at the shares.
 
 ### 4.7 Export
 

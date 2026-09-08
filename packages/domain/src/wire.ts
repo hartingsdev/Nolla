@@ -16,13 +16,19 @@ import { localDate } from './ports';
  * was left, and lets an edit re-apply the rule to a new total.
  *
  * Weights and basis points are decimal strings for the same reason money is:
- * JSON has no integers of arbitrary size (P6).
+ * JSON has no integers of arbitrary size (P6). They travel as ORDERED ARRAYS
+ * rather than maps: `allocate` walks the rule in key order and `roundAll`'s
+ * tie-break is positional, while jsonb reorders object keys as it pleases — so a
+ * map would let a round-trip through the database hand the residual cent to a
+ * different person.
  */
+export interface WireRuleEntry { readonly participantId: string; readonly value: string }
+
 export type WireSplitRule =
   | { readonly kind: 'equal'; readonly among: readonly string[] }
-  | { readonly kind: 'weights'; readonly weights: Readonly<Record<string, string>> }
-  | { readonly kind: 'percent'; readonly bps: Readonly<Record<string, string>> }
-  | { readonly kind: 'exact'; readonly amounts: Readonly<Record<string, string>> };
+  | { readonly kind: 'weights'; readonly weights: readonly WireRuleEntry[] }
+  | { readonly kind: 'percent'; readonly bps: readonly WireRuleEntry[] }
+  | { readonly kind: 'exact'; readonly amounts: readonly WireRuleEntry[] };
 
 export interface WireSurcharge { readonly participantId: string; readonly amount: string }
 
@@ -58,24 +64,28 @@ export interface Entry extends LedgerEntry {
   readonly settled?: Readonly<Record<string, string>>;
 }
 
-const mapValues = <A, B>(o: Readonly<Record<string, A>>, f: (a: A) => B): Record<string, B> =>
-  Object.fromEntries(Object.entries(o).map(([k, v]) => [k, f(v)]));
+const toEntries = <A>(o: Readonly<Record<string, A>>, f: (a: A) => string): WireRuleEntry[] =>
+  Object.entries(o).map(([participantId, v]) => ({ participantId, value: f(v) }));
+
+/** Rebuilds the record in array order; JS keeps string keys in insertion order, `allocate` reads them that way. */
+const fromEntries = <B>(rows: readonly WireRuleEntry[], f: (v: string) => B): Record<ParticipantId, B> =>
+  Object.fromEntries(rows.map((r) => [r.participantId, f(r.value)]));
 
 export function splitRuleToWire(r: SplitRule): WireSplitRule {
   switch (r.kind) {
     case 'equal': return { kind: 'equal', among: [...r.among] };
-    case 'weights': return { kind: 'weights', weights: mapValues(r.weights, (w) => w.toString()) };
-    case 'percent': return { kind: 'percent', bps: mapValues(r.bps, (b) => b.toString()) };
-    case 'exact': return { kind: 'exact', amounts: mapValues(r.amounts, moneyToString) };
+    case 'weights': return { kind: 'weights', weights: toEntries(r.weights, (w) => w.toString()) };
+    case 'percent': return { kind: 'percent', bps: toEntries(r.bps, (b) => b.toString()) };
+    case 'exact': return { kind: 'exact', amounts: toEntries(r.amounts, moneyToString) };
   }
 }
 
 export function splitRuleFromWire(w: WireSplitRule, ccy: Currency): SplitRule {
   switch (w.kind) {
     case 'equal': return { kind: 'equal', among: w.among as ParticipantId[] };
-    case 'weights': return { kind: 'weights', weights: mapValues(w.weights, BigInt) };
-    case 'percent': return { kind: 'percent', bps: mapValues(w.bps, BigInt) };
-    case 'exact': return { kind: 'exact', amounts: mapValues(w.amounts, (a) => moneyFromString(a, ccy)) };
+    case 'weights': return { kind: 'weights', weights: fromEntries(w.weights, BigInt) };
+    case 'percent': return { kind: 'percent', bps: fromEntries(w.bps, BigInt) };
+    case 'exact': return { kind: 'exact', amounts: fromEntries(w.amounts, (a) => moneyFromString(a, ccy)) };
   }
 }
 

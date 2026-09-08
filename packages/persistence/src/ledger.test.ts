@@ -96,6 +96,41 @@ describe('entries', () => {
       .toEqual([{ field: 'description', from: 'x', to: 'renamed' }]);
   });
 
+  it('stores how the entry was split, so an edit can re-apply the rule (FR-3.5, FR-3.7)', async () => {
+    const id = randomUUID();
+    const amount = money(9000n, EUR);
+    const a = f.pids[0]! as ParticipantId;
+    const b = f.pids[1]! as ParticipantId;
+    const c = f.pids[2]! as ParticipantId;
+    const rule = { kind: 'weights' as const, weights: { [a]: 2n, [b]: 1n, [c]: 1n } };
+    const surcharges = [a, b, c].map((pid) => ({ participantId: pid, amount: money(400n, EUR) }));
+    const w: WireEntry = entryToWire({
+      id, type: 'expense', description: 'Ferienhaus', amount, date: localDate('2026-03-02'),
+      payments: [{ participantId: a, amount }],
+      shares: allocate(amount, rule, { seed: id, surcharges }),
+      split: { rule, surcharges },
+      createdAt: '2026-03-02T10:00:00.000Z',
+    });
+    await entryRepo.create(conn.db, f.tripId, w, f.userId);
+
+    const back = await entryRepo.get(conn.db, f.tripId, id);
+    expect(back.split).toEqual(w.split);
+    // The stored rule reproduces the stored shares exactly — the property the column exists for.
+    const again = entryFromWire(back);
+    const shares = allocate(again.amount, again.split!.rule, { seed: id, surcharges: again.split!.surcharges ?? [] });
+    expect(shares.map((x) => x.amount.scaled)).toEqual(again.shares.map((x) => x.amount.scaled));
+
+    // An update carries it too, rather than dropping it on the way through.
+    const updated = await entryRepo.update(conn.db, f.tripId, { ...w, description: 'Ferienhaus 2' }, 1, f.userId);
+    expect(updated.split).toEqual(w.split);
+  });
+
+  it('an entry without a split rule is stored and read back without one', async () => {
+    const w = expense(randomUUID(), 3000n, f.pids[0]!, f.pids);
+    await entryRepo.create(conn.db, f.tripId, w, f.userId);
+    expect((await entryRepo.get(conn.db, f.tripId, w.id)).split).toBeUndefined();
+  });
+
   it('an entry id from another trip has no history here', async () => {
     const other = await fixture(2);
     const w = expense(randomUUID(), 1000n, f.pids[0]!, f.pids);

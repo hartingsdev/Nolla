@@ -20,14 +20,15 @@ export const wirePayment = z.object({ participantId: uuid, amount: moneyString }
 export const wireShare = z.object({ participantId: uuid, amount: preciseString, settledBy: uuid.optional() });
 /** Non-negative integer as a decimal string: weights and basis points (P6 — JSON has no bigint). */
 const bigintString = z.string().regex(/^\d{1,20}$/, 'must be a non-negative integer string');
-const participantMap = <T extends z.ZodType>(v: T) => z.record(uuid, v);
+/** Ordered, because `allocate` walks the rule in order and jsonb does not keep object keys in one. */
+const ruleEntries = <T extends z.ZodType>(v: T) => z.array(z.object({ participantId: uuid, value: v })).min(1).max(100);
 
 /** How the entry was split, kept next to the shares it produced (FR-3.5, FR-3.7). */
 export const wireSplitRule = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('equal'), among: z.array(uuid).min(1).max(100) }),
-  z.object({ kind: z.literal('weights'), weights: participantMap(bigintString) }),
-  z.object({ kind: z.literal('percent'), bps: participantMap(bigintString) }),
-  z.object({ kind: z.literal('exact'), amounts: participantMap(moneyString) }),
+  z.object({ kind: z.literal('weights'), weights: ruleEntries(bigintString) }),
+  z.object({ kind: z.literal('percent'), bps: ruleEntries(bigintString) }),
+  z.object({ kind: z.literal('exact'), amounts: ruleEntries(moneyString) }),
 ]);
 export const wireSplit = z.object({
   rule: wireSplitRule,
