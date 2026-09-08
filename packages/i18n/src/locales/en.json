@@ -42,11 +42,16 @@
     "splitAmong": "Split among",
     "split": {
       "equal": "Equal",
-      "exact": "Exact amounts"
+      "exact": "Exact amounts",
+      "weights": "By shares",
+      "percent": "Percent",
+      "weightsHint": "Give each person a number of shares — 2 for a couple, 1 each for the rest."
     },
     "perPerson": "{{amount}} per person",
     "residual": "{{amount}} left to assign",
     "residualNegative": "{{amount}} over the total",
+    "percentResidual": "{{percent}}% left to assign",
+    "percentOver": "{{percent}}% over 100%",
     "assignRest": "Put the rest on {{name}}",
     "save": "Save",
     "delete": "Delete",
@@ -68,7 +73,9 @@
       "description": "Add a description",
       "date": "Enter a date as YYYY-MM-DD",
       "transfer": "Pick two different people",
-      "payers": "Payer amounts must add up to the total"
+      "payers": "Payer amounts must add up to the total",
+      "weights": "At least one person needs a share",
+      "percent": "Percentages must add up to 100%"
     },
     "newPayment": "New payment",
     "from": "From",

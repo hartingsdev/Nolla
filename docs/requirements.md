@@ -364,7 +364,7 @@ the signup wall never blocks *other people's* expense entry.
 | FR-3.2 | M | **Equal** split. |
 | FR-3.3 | M | Include/exclude toggle per participant, one tap each. |
 | FR-3.4 | M | **Exact amounts** per participant (covers `Casamore`, `Essen Saarbrücken`). |
-| FR-3.5 | S | **Weights/shares** (e.g. 2:1:1) and **percentages**. |
+| FR-3.5 | S | **Weights/shares** (e.g. 2:1:1) and **percentages**. *Shipped in the entry form; the rule is applied at save time and not stored, so reopening a weighted entry shows the exact amounts it produced.* |
 | FR-3.6 | M | Guarantee Σ shares == total. On equal/weight/percentage splits, shares are computed and stored as `Precise` (§5.1) so they sum to the total exactly with no cent to allocate; the €11.036 case is stored as €11.036. On exact-amount splits the shares are `Money` typed by a human, so saving is blocked until the residual is €0.00, offering "assign remainder to …". Display rounds per P3/P4 and shows the rounded shares summing to the total. |
 | FR-3.7 | S | Per-person surcharge line on an entry — **tip** (`Trinkgeld p.P.`), service charge, deposit — added on top of the split base. *Confirmed in scope (D6).* |
 | FR-3.8 | S | Remember the last split configuration per trip and per category as the default. |

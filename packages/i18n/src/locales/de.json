@@ -42,11 +42,16 @@
     "splitAmong": "Aufteilen auf",
     "split": {
       "equal": "Gleich",
-      "exact": "Genaue Beträge"
+      "exact": "Genaue Beträge",
+      "weights": "Nach Anteilen",
+      "percent": "Prozent",
+      "weightsHint": "Anteile pro Person — 2 für ein Paar, je 1 für die anderen."
     },
     "perPerson": "{{amount}} pro Person",
     "residual": "{{amount}} noch zu verteilen",
     "residualNegative": "{{amount}} über dem Gesamtbetrag",
+    "percentResidual": "{{percent}} % noch zu verteilen",
+    "percentOver": "{{percent}} % über 100 %",
     "assignRest": "Rest auf {{name}} buchen",
     "save": "Speichern",
     "delete": "Löschen",
@@ -68,7 +73,9 @@
       "description": "Beschreibung eingeben",
       "date": "Datum als JJJJ-MM-TT eingeben",
       "transfer": "Zwei verschiedene Personen wählen",
-      "payers": "Zahlerbeträge müssen den Gesamtbetrag ergeben"
+      "payers": "Zahlerbeträge müssen den Gesamtbetrag ergeben",
+      "weights": "Mindestens eine Person braucht einen Anteil",
+      "percent": "Die Prozentwerte müssen zusammen 100 % ergeben"
     },
     "newPayment": "Neue Zahlung",
     "from": "Von",

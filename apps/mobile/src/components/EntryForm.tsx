@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Switch, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
-  type Entry, type Money, type ParticipantId, type Payment, type SplitRule, DomainError, M, allocate, exactResidual, localDate, moneyFromString, moneyToString, roundAll, toPrecise, validateEntry, zeroMoney,
+  type Entry, type Money, type ParticipantId, type Payment, type SplitRule, BPS_TOTAL, DomainError, M, allocate, exactResidual, localDate, moneyFromString, moneyToString, roundAll, toPrecise, validateEntry, zeroMoney,
 } from '@vst/domain';
 import { formatMoney, normalizeAmountInput } from '../format';
+import { bpsToText, parseBps, parseWeight, seedPercents } from '../split-input';
 import { todayLocal, uuidv7 } from '../ids';
 import { useCcy, useMeId, useParticipants } from '../selectors';
 import { space, useTheme } from '../theme';
@@ -12,6 +13,8 @@ import { Body, Button, Card, Chip, H2, Row, Screen } from './ui';
 import { CATEGORIES, CATEGORY_ICON } from '../categories';
 
 type Kind = 'expense' | 'transfer';
+/** How the amount is divided (FR-3.1–3.5). The rule is applied at save time, not stored. */
+type Mode = 'equal' | 'weights' | 'percent' | 'exact';
 
 interface Props {
   readonly initial?: Entry;
@@ -47,7 +50,9 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(
     initial && initial.type !== 'transfer' && initial.payments.length > 1 ? Object.fromEntries(initial.payments.map((p) => [p.participantId, plain(p.amount)])) : {});
   const [among, setAmong] = useState<Set<string>>(() => new Set(initial && initial.type !== 'transfer' ? initial.shares.map((s) => s.participantId) : participants.map((p) => p.id)));
-  const [mode, setMode] = useState<'equal' | 'exact'>(() => {
+  // Only equal and exact can be recovered from stored shares; a weighted entry
+  // reopens as the exact amounts it produced, which is lossless if not literal.
+  const [mode, setMode] = useState<Mode>(() => {
     if (!initial || initial.type === 'transfer') return 'equal';
     const first = initial.shares[0]?.amount.scaled ?? 0n;
     return initial.shares.every((s) => { const d = s.amount.scaled - first; return d >= -1n && d <= 1n; }) ? 'equal' : 'exact';
@@ -57,6 +62,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     const shown = roundAll(initial.shares.map((s) => s.amount), initial.amount, initial.id);
     return Object.fromEntries(initial.shares.map((s, i) => [s.participantId, plain(shown[i] ?? zeroMoney(ccy))]));
   });
+  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [percents, setPercents] = useState<Record<string, string>>({});
   // transfer
   const [from, setFrom] = useState<string | null>(initial?.type === 'transfer' ? initial.payments[0]?.participantId ?? null : meId);
   const [to, setTo] = useState<string | null>(initial?.type === 'transfer' ? initial.shares[0]?.participantId ?? null : null);
@@ -77,16 +84,36 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     ? M.sub(amount, M.sum(payers.map((id) => { const m = parse(payerAmounts[id]); return amount.minor < 0n ? M.neg(m) : m; }), ccy))
     : null;
 
-  const preview = (() => {
-    if (kind !== 'expense' || !amount || selected.length === 0 || mode !== 'equal') return null;
-    try { return roundAll(allocate(amount, { kind: 'equal', among: selected.map((p) => p.id as ParticipantId) }, { seed: 'preview' }).map((s) => s.amount), amount, 'preview')[0] ?? null; } catch { return null; }
+  const weightSum = selected.reduce((acc, p) => acc + parseWeight(weights[p.id]), 0n);
+  const bpsResidual = mode === 'percent' ? BPS_TOTAL - selected.reduce((acc, p) => acc + parseBps(percents[p.id]), 0n) : 0n;
+
+  /** The rule the current inputs describe. `allocate` decides whether it is usable. */
+  const rule: SplitRule | null = (() => {
+    const ids = selected.map((p) => p.id as ParticipantId);
+    if (kind !== 'expense' || ids.length === 0) return null;
+    switch (mode) {
+      case 'equal': return { kind: 'equal', among: ids };
+      case 'weights': return { kind: 'weights', weights: Object.fromEntries(selected.map((p) => [p.id, parseWeight(weights[p.id])])) };
+      case 'percent': return { kind: 'percent', bps: Object.fromEntries(selected.map((p) => [p.id, parseBps(percents[p.id])])) };
+      case 'exact': return { kind: 'exact', amounts: Object.fromEntries(selected.map((p, i) => [p.id, exactAmounts[i] ?? zeroMoney(ccy)])) };
+    }
   })();
+
+  /** What each person would owe, in the order of `selected`. Null while the inputs don't add up. */
+  const previewShares: Money[] | null = (() => {
+    if (!amount || !rule) return null;
+    try { return roundAll(allocate(amount, rule, { seed: 'preview' }).map((s) => s.amount), amount, 'preview'); } catch { return null; }
+  })();
+  const preview = mode === 'equal' ? previewShares?.[0] ?? null : null;
 
   const toggleAmong = (id: string) => { setAmong((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); };
   const togglePayer = (id: string) => { setPayers((ps) => (ps.includes(id) ? ps.filter((x) => x !== id) : [...ps, id])); };
   const assignRest = (id: string) => {
     if (!shareResidual) return;
     setExact((e) => ({ ...e, [id]: plain(M.add(parse(e[id]), shareResidual)) }));
+  };
+  const assignRestPercent = (id: string) => {
+    setPercents((e) => ({ ...e, [id]: bpsToText(parseBps(e[id]) + bpsResidual, locale) }));
   };
   const assignPayerRest = (id: string) => {
     if (!payerResidual) return;
@@ -117,9 +144,9 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         const payments: Payment[] = multiPayer
           ? payers.map((pid) => { const m = parse(payerAmounts[pid]); return { participantId: pid as ParticipantId, amount: amount.minor < 0n ? M.neg(m) : m }; })
           : [{ participantId: payers[0] as ParticipantId, amount }];
-        const rule: SplitRule = mode === 'equal'
-          ? { kind: 'equal', among: selected.map((p) => p.id as ParticipantId) }
-          : { kind: 'exact', amounts: Object.fromEntries(selected.map((p, i) => [p.id, exactAmounts[i] ?? zeroMoney(ccy)])) };
+        if (mode === 'weights' && weightSum === 0n) { setError(t('entry.invalid.weights')); return; }
+        if (mode === 'percent' && bpsResidual !== 0n) { setError(t('entry.invalid.percent')); return; }
+        if (!rule) { setError(t('entry.invalid.split')); return; }
         entry = { id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments, shares: allocate(amount, rule, { seed: id }), createdAt, deleted: false, ...(category ? { category } : {}) };
       }
       validateEntry(entry);
@@ -130,7 +157,10 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   };
 
   const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: th.border } as const;
-  const disabled = !amount || (kind === 'expense' && (selected.length === 0 || (shareResidual !== null && !M.isZero(shareResidual)) || (payerResidual !== null && !M.isZero(payerResidual)))) || (kind === 'transfer' && (!from || !to || from === to));
+  const splitIncomplete = (shareResidual !== null && !M.isZero(shareResidual))
+    || (mode === 'weights' && weightSum === 0n)
+    || (mode === 'percent' && bpsResidual !== 0n);
+  const disabled = !amount || (kind === 'expense' && (selected.length === 0 || splitIncomplete || (payerResidual !== null && !M.isZero(payerResidual)))) || (kind === 'transfer' && (!from || !to || from === to));
 
   return (
     <Screen>
@@ -201,9 +231,32 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={among.has(p.id)} onPress={() => { toggleAmong(p.id); }} />)}</Row>
             <Row>
               <Chip label={t('entry.split.equal')} selected={mode === 'equal'} onPress={() => { setMode('equal'); }} />
+              <Chip label={t('entry.split.weights')} selected={mode === 'weights'} onPress={() => { setMode('weights'); }} />
+              <Chip label={t('entry.split.percent')} selected={mode === 'percent'} onPress={() => { setMode('percent'); setPercents(seedPercents(selected.map((p) => p.id), locale)); }} />
               <Chip label={t('entry.split.exact')} selected={mode === 'exact'} onPress={() => { setMode('exact'); }} />
             </Row>
             {mode === 'equal' && preview && <Body muted>{t('entry.perPerson', { amount: formatMoney(preview, locale) })}</Body>}
+            {mode === 'weights' && <Body muted style={{ fontSize: 13 }}>{t('entry.split.weightsHint')}</Body>}
+            {(mode === 'weights' || mode === 'percent') && selected.map((p, i) => (
+              <Row key={p.id} style={{ justifyContent: 'space-between' }}>
+                <Body style={{ flex: 1 }}>{p.name}</Body>
+                {previewShares && <Body muted>{formatMoney(previewShares[i] ?? zeroMoney(ccy), locale)}</Body>}
+                <TextInput
+                  value={mode === 'weights' ? weights[p.id] ?? '1' : percents[p.id] ?? ''}
+                  onChangeText={(v) => { if (mode === 'weights') setWeights((e) => ({ ...e, [p.id]: v })); else setPercents((e) => ({ ...e, [p.id]: v })); }}
+                  keyboardType={mode === 'weights' ? 'number-pad' : 'decimal-pad'} placeholder={mode === 'weights' ? '1' : '0'} placeholderTextColor={th.muted}
+                  style={[inputStyle, { width: 90, textAlign: 'right' }]} accessibilityLabel={p.name} />
+              </Row>
+            ))}
+            {mode === 'weights' && weightSum === 0n && <Body style={{ color: th.negative }}>{t('entry.invalid.weights')}</Body>}
+            {mode === 'percent' && bpsResidual !== 0n && (
+              <View style={{ gap: space.sm }}>
+                <Body style={{ color: th.negative }}>
+                  {bpsResidual > 0n ? t('entry.percentResidual', { percent: bpsToText(bpsResidual, locale) }) : t('entry.percentOver', { percent: bpsToText(-bpsResidual, locale) })}
+                </Body>
+                <Row>{selected.map((p) => <Chip key={p.id} label={t('entry.assignRest', { name: p.name })} selected={false} onPress={() => { assignRestPercent(p.id); }} />)}</Row>
+              </View>
+            )}
             {mode === 'exact' && selected.map((p) => (
               <Row key={p.id} style={{ justifyContent: 'space-between' }}>
                 <Body style={{ flex: 1 }}>{p.name}</Body>

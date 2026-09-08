@@ -70,3 +70,62 @@ test('two payers must add up to the total', async ({ page }) => {
   await expect(page.getByText('paid by Yannik, Robert')).toBeVisible();
   await expectBalancesSumToZero(page);
 });
+
+test('share split: a double share for one person and one each for the rest (FR-3.5)', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('90');
+  await page.getByLabel('Description').first().fill('Ferienwohnung');
+  await setPayer(page, 'Marc');
+  await page.getByRole('button', { name: 'By shares' }).click();
+  await page.getByLabel('Yannik', { exact: true }).fill('2');   // a couple in one room
+  // 6 shares over €90: €15 a share, so Yannik carries €30.
+  await expect(page.getByText('€30.00')).toBeVisible();
+  expect(await page.getByText('€15.00').count()).toBe(4);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await page.getByText('Ferienwohnung').first().click();
+  await expect(page.getByText('€30.00')).toBeVisible();
+  expect(await page.getByText(/^€15\.00$/).count()).toBe(4);
+  await expectBalancesSumToZero(page);
+});
+
+test('percent split seeds an even 100% and refuses to save while it does not add up', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('200');
+  await page.getByLabel('Description').first().fill('Hotel');
+  await setPayer(page, 'Marc');
+  await page.getByRole('button', { name: 'Percent', exact: true }).click();
+  await expect(page.getByLabel('Yannik', { exact: true })).toHaveValue('20');
+
+  await page.getByLabel('Yannik', { exact: true }).fill('40');
+  await expect(page.getByText('20% over 100%')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Put the rest on Robert' }).click();
+  await expect(page.getByLabel('Robert', { exact: true })).toHaveValue('0');
+  await expect(page.getByText(/over 100%|left to assign/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await page.goto('/ledger');
+  await page.getByText('Hotel').first().click();
+  await expect(page.getByText('€80.00')).toBeVisible();  // Yannik, 40%
+  await expect(page.getByText('€0.00')).toBeVisible();   // Robert, 0%
+  await expectBalancesSumToZero(page);
+});
+
+test('percentages that do not divide evenly still add up to exactly 100%', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('100');
+  await page.getByLabel('Description').first().fill('Taxi');
+  await page.getByRole('button', { name: 'Tobias', exact: true }).nth(1).click();  // out of the split
+  await page.getByRole('button', { name: 'Marc', exact: true }).nth(1).click();
+  await page.getByRole('button', { name: 'Percent', exact: true }).click();
+  await expect(page.getByLabel('Yannik', { exact: true })).toHaveValue('33.34');
+  await expect(page.getByLabel('Max', { exact: true })).toHaveValue('33.33');
+  await expect(page.getByText(/over 100%|left to assign/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await page.getByText('Taxi').first().click();
+  await expect(page.getByText('€33.34')).toBeVisible();
+  await expectBalancesSumToZero(page);
+});
