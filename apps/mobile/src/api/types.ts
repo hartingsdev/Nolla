@@ -13,3 +13,8 @@ export interface Feed {
   more: boolean;
 }
 export interface EntryRecord extends WireEntry { tripId: string; version: number; seq: string; updatedAt: string }
+
+export interface Actor { userId: string; displayName: string | null }
+/** One recorded state of an entry, plus who replaced it and when (FR-10.2). */
+export interface EntryRevision { version: number; at: string; actor: Actor | null; snapshot: WireEntry }
+export interface EntryHistory { entryId: string; createdAt: string; createdBy: Actor | null; revisions: EntryRevision[]; current: EntryRecord }

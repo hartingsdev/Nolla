@@ -151,6 +151,10 @@ export function tripRoutes(deps: AppDeps) {
     const rec = await entryRepo.setDeleted(db, c.get('tripId'), c.req.param('eid'), ifMatch(c.req.header('if-match')), false, c.get('userId'));
     return jsonBig(c, rec);
   });
+  /** FR-10.2: every recorded state of one entry, with who changed it and when. */
+  app.get('/trips/:tripId/entries/:eid/history', async (c) =>
+    jsonBig(c, await entryRepo.history(db, c.get('tripId'), c.req.param('eid'))));
+
   app.post('/trips/:tripId/entries/:eid/settle-share', zValidator('json', settleShare), async (c) => {
     const b = c.req.valid('json');
     await entryRepo.settleShare(db, c.get('tripId'), c.req.param('eid'), b.participantId, b.transferEntryId);

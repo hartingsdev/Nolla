@@ -8,3 +8,4 @@ export * from './lifecycle';
 export * from './entitlements';
 export * from './wire';
 export * from './export';
+export * from './history';

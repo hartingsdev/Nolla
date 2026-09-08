@@ -2,7 +2,7 @@ import { and, asc, eq, gt, inArray } from 'drizzle-orm';
 import { type WireEntry, currency, entryFromWire, validateEntry } from '@vst/domain';
 import { type Db } from '../db';
 import { ConflictError, NotFoundError } from '../errors';
-import { entries, entryHistory, payments, shares } from '../schema';
+import { entries, entryHistory, payments, shares, users } from '../schema';
 import { nextSeq, tripRepo } from './trips';
 
 /** WireEntry plus what persistence adds. Money stays a string here (P6). */
@@ -11,6 +11,24 @@ export interface EntryRecord extends WireEntry {
   readonly version: number;
   readonly seq: bigint;
   readonly updatedAt: string;
+}
+
+export interface Actor { readonly userId: string; readonly displayName: string | null }
+
+/** One recorded state of an entry, plus who replaced it and when (FR-10.2). */
+export interface EntryRevision {
+  readonly version: number;
+  readonly at: string;
+  readonly actor: Actor | null;
+  readonly snapshot: WireEntry;
+}
+
+export interface EntryHistory {
+  readonly entryId: string;
+  readonly createdAt: string;
+  readonly createdBy: Actor | null;
+  readonly revisions: readonly EntryRevision[];
+  readonly current: EntryRecord;
 }
 
 type EntryRow = typeof entries.$inferSelect;
@@ -152,6 +170,46 @@ export const entryRepo = {
       await tx.update(entries).set({ deletedAt: deleted ? new Date() : null, version: current.version + 1, seq, updatedAt: new Date() }).where(eq(entries.id, entryId));
       return entryRepo.get(tx, tripId, entryId);
     });
+  },
+
+  /**
+   * The audit trail for one entry (FR-10.2).
+   *
+   * A history row holds the state the entry was in BEFORE a change, the version
+   * it had then, and who made the change that replaced it. So the trail reads as
+   * a chain: created → snapshot(v1) → snapshot(v2) → … → the row as it stands.
+   * Creation itself has no history row; it comes off the entry's own createdBy.
+   *
+   * Actor display names are resolved here rather than in the client, because a
+   * member who never claimed a participant — or whose account is gone — has no
+   * name anywhere else.
+   */
+  async history(db: Db, tripId: string, entryId: string): Promise<EntryHistory> {
+    const row = await db.query.entries.findFirst({ where: and(eq(entries.id, entryId), eq(entries.tripId, tripId)) });
+    if (!row) throw new NotFoundError(`entry ${entryId}`);
+    const revisions = await db.query.entryHistory.findMany({
+      where: and(eq(entryHistory.entryId, entryId), eq(entryHistory.tripId, tripId)),
+      orderBy: asc(entryHistory.version),
+    });
+    const actorIds = [...new Set([row.createdBy, ...revisions.map((r) => r.actor)].filter((x): x is string => x !== null))];
+    const people = actorIds.length === 0 ? [] : await db.query.users.findMany({ where: inArray(users.id, actorIds) });
+    const actor = (id: string | null): Actor | null => {
+      if (id === null) return null;
+      const u = people.find((x) => x.id === id);
+      return { userId: id, displayName: u?.displayName ?? u?.email?.split('@')[0] ?? null };
+    };
+    return {
+      entryId,
+      createdAt: row.createdAt.toISOString(),
+      createdBy: actor(row.createdBy),
+      revisions: revisions.map((r) => ({
+        version: r.version,
+        at: r.at.toISOString(),
+        actor: actor(r.actor),
+        snapshot: r.snapshot as WireEntry,
+      })),
+      current: await entryRepo.get(db, tripId, entryId),
+    };
   },
 
   /** FR-7.4: link a share to the transfer that settled it. */

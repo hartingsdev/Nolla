@@ -153,6 +153,36 @@ describe('trips, invites, participants', () => {
 });
 
 describe('ledger', () => {
+  it('serves the audit trail for one entry, with actors resolved (FR-10.2)', async () => {
+    const a = await signIn('h1', 'robert@h.de');
+    const { tripId, me } = await newTrip(a.token, 'Historie');
+    const max = await addPlaceholder(a.token, tripId, 'Max');
+    const w = expenseWire(3000n, me, [me, max]);
+    await call(`/trips/${tripId}/entries`, { ...json(w), token: a.token });
+
+    const fresh = await call(`/trips/${tripId}/entries/${w.id}/history`, { token: a.token });
+    expect(fresh.status).toBe(200);
+    expect(fresh.body.revisions).toEqual([]);
+    expect(fresh.body.createdBy.displayName).toBe('robert');
+    expect(fresh.body.current.version).toBe(1);
+
+    await call(`/trips/${tripId}/entries/${w.id}`, { ...json({ ...w, description: 'renamed' }, { 'if-match': '1' }), method: 'PATCH', token: a.token });
+    await call(`/trips/${tripId}/entries/${w.id}`, { method: 'DELETE', headers: { 'if-match': '2' }, token: a.token });
+
+    const h = await call(`/trips/${tripId}/entries/${w.id}/history`, { token: a.token });
+    expect(h.body.revisions.map((r: { version: number }) => r.version)).toEqual([1, 2]);
+    expect(h.body.revisions[0].snapshot.description).toBe('x');
+    expect(h.body.revisions[1].snapshot.description).toBe('renamed');
+    expect(h.body.revisions.every((r: { actor: { displayName: string } }) => r.actor.displayName === 'robert')).toBe(true);
+    expect(h.body.current.deleted).toBe(true);
+
+    // The trail is trip-scoped like everything else: another member's trip cannot read it.
+    const b = await signIn('h2', 'max@h.de');
+    const other = await newTrip(b.token, 'Andere');
+    expect((await call(`/trips/${other.tripId}/entries/${w.id}/history`, { token: b.token })).status).toBe(404);
+    expect((await call(`/trips/${tripId}/entries/${w.id}/history`, { token: b.token })).status).toBe(404);
+  });
+
   it('create, feed, update with If-Match, conflict, delete, restore — with server-side balances agreeing', async () => {
     const { token } = await signIn('l1');
     const { tripId, me } = await newTrip(token);

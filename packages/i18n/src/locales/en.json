@@ -289,5 +289,32 @@
       "from": "From",
       "to": "To"
     }
+  },
+  "history": {
+    "title": "History",
+    "loading": "Loading…",
+    "unavailable": "History could not be loaded.",
+    "someone": "someone",
+    "by": "Changed by {{name}}",
+    "created": "Created by {{name}}",
+    "deleted": "Deleted",
+    "restored": "Restored",
+    "nothing": "nothing",
+    "changed": "{{field}}: {{from}} → {{to}}",
+    "paidAdded": "{{name}} started paying {{amount}}",
+    "paidRemoved": "{{name}} stopped paying {{amount}}",
+    "paidChanged": "{{name}} paid {{from}} → {{to}}",
+    "shareAdded": "{{name}} joined the split with {{amount}}",
+    "shareRemoved": "{{name}} left the split ({{amount}})",
+    "shareChanged": "{{name}}'s share {{from}} → {{to}}",
+    "field": {
+      "type": "Type",
+      "description": "Description",
+      "amount": "Amount",
+      "date": "Date",
+      "category": "Category",
+      "reason": "Reason",
+      "deleted": "Deleted"
+    }
   }
 }

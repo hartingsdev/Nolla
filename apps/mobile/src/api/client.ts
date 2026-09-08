@@ -2,8 +2,8 @@ import { type WireEntry } from '@vst/domain';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-export { ApiError, NetworkError, type Feed, type EntryRecord } from './types';
-import { ApiError, NetworkError, type Feed, type EntryRecord } from './types';
+export { ApiError, NetworkError, type Feed, type EntryRecord, type EntryHistory } from './types';
+import { ApiError, NetworkError, type Feed, type EntryRecord, type EntryHistory } from './types';
 
 /** Thin typed fetch wrapper. Money is strings on the wire; nothing here parses amounts. */
 export class ApiClient {
@@ -56,6 +56,7 @@ export class ApiClient {
   createEntry(tripId: string, entry: WireEntry) { return this.request<EntryRecord>('POST', `/trips/${tripId}/entries`, { body: entry }); }
   updateEntry(tripId: string, entry: WireEntry, ifMatch: number) { return this.request<EntryRecord>('PATCH', `/trips/${tripId}/entries/${entry.id}`, { body: entry, ifMatch }); }
   setDeleted(tripId: string, id: string, ifMatch: number, deleted: boolean) { return this.request<EntryRecord>(deleted ? 'DELETE' : 'POST', `/trips/${tripId}/entries/${id}${deleted ? '' : '/restore'}`, { ifMatch }); }
+  entryHistory(tripId: string, entryId: string) { return this.request<EntryHistory>('GET', `/trips/${tripId}/entries/${entryId}/history`); }
   settleShare(tripId: string, entryId: string, participantId: string, transferEntryId: string | null) { return this.request<null>('POST', `/trips/${tripId}/entries/${entryId}/settle-share`, { body: { participantId, transferEntryId } }); }
   // receipts
   presignAttachment(tripId: string, entryId: string, a: { id: string; mime: string; bytes: number }) { return this.request<{ id: string; upload: { url: string; method: 'PUT'; headers: Record<string, string> }; expiresIn: number }>('POST', `/trips/${tripId}/entries/${entryId}/attachments`, { body: a }); }

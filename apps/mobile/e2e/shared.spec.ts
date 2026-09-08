@@ -103,3 +103,48 @@ test('an invite opened before sign-in is resumed after sign-in', async ({ browse
   await expect(late.getByRole('heading', { name: 'Late joiner' })).toBeVisible();
   await expect(late.getByRole('button', { name: /Lena/ })).toBeVisible();
 });
+
+test('the entry history says who changed what, on a shared trip (FR-10.2)', async ({ browser }) => {
+  const robert = await newUser(browser, `hist-${Date.now()}@t.de`);
+  await robert.getByLabel('Trip name').fill('Verlauf');
+  await robert.getByRole('button', { name: 'New shared trip' }).click();
+  await expect(robert.getByRole('heading', { name: 'Verlauf' })).toBeVisible();
+
+  // A fresh entry has only its creation to show.
+  await robert.goto('/entry/new');
+  await robert.getByLabel('Amount').first().fill('30');
+  await robert.getByLabel('Description').first().fill('Tanken');
+  await robert.getByRole('button', { name: 'Save' }).click();
+  await expect(robert.getByText('Synced')).toBeVisible({ timeout: 20_000 });
+  await robert.goto('/ledger');
+  await robert.getByText('Tanken').first().click();
+  await expect(robert.getByText(/^Created by /)).toBeVisible({ timeout: 15_000 });
+  await expect(robert.getByText(/^Changed by /)).toHaveCount(0);
+
+  // Edit it: the amount and the description both land in the trail.
+  await robert.getByRole('button', { name: 'Edit entry' }).click();
+  await robert.getByLabel('Amount').first().fill('42');
+  await robert.getByLabel('Description').first().fill('Tanken Samstag');
+  await robert.getByRole('button', { name: 'Save' }).click();
+  // Saving an edit returns to the entry, which carries no sync banner; the home screen does.
+  await robert.goto('/');
+  await expect(robert.getByText('Synced')).toBeVisible({ timeout: 20_000 });
+  await robert.goto('/ledger');
+  await robert.getByText('Tanken Samstag').first().click();
+
+  await expect(robert.getByText(/^Changed by /).first()).toBeVisible({ timeout: 15_000 });
+  await expect(robert.getByText('Amount: €30.00 → €42.00')).toBeVisible();
+  await expect(robert.getByText('Description: “Tanken” → “Tanken Samstag”')).toBeVisible();
+  // The creation stays at the bottom of the trail.
+  await expect(robert.getByText(/^Created by /)).toBeVisible();
+
+  // Deleting is a change like any other, and reads as one.
+  robert.once('dialog', (d) => { void d.accept(); });
+  await robert.getByRole('button', { name: 'Delete', exact: true }).click();
+  await robert.goto('/');
+  await expect(robert.getByText('Synced')).toBeVisible({ timeout: 20_000 });
+  await robert.goto('/ledger');
+  await robert.getByRole('button', { name: /Show deleted/ }).click();
+  await robert.getByText('Tanken Samstag').first().click();
+  await expect(robert.getByText('Deleted', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+});

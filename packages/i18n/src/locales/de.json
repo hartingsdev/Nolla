@@ -289,5 +289,32 @@
       "from": "Von",
       "to": "An"
     }
+  },
+  "history": {
+    "title": "Verlauf",
+    "loading": "Wird geladen…",
+    "unavailable": "Verlauf konnte nicht geladen werden.",
+    "someone": "jemand",
+    "by": "Geändert von {{name}}",
+    "created": "Erstellt von {{name}}",
+    "deleted": "Gelöscht",
+    "restored": "Wiederhergestellt",
+    "nothing": "nichts",
+    "changed": "{{field}}: {{from}} → {{to}}",
+    "paidAdded": "{{name}} zahlt jetzt {{amount}}",
+    "paidRemoved": "{{name}} zahlt nicht mehr ({{amount}})",
+    "paidChanged": "{{name}} zahlte {{from}} → {{to}}",
+    "shareAdded": "{{name}} kam in die Aufteilung mit {{amount}}",
+    "shareRemoved": "{{name}} ist aus der Aufteilung raus ({{amount}})",
+    "shareChanged": "Anteil von {{name}} {{from}} → {{to}}",
+    "field": {
+      "type": "Art",
+      "description": "Beschreibung",
+      "amount": "Betrag",
+      "date": "Datum",
+      "category": "Kategorie",
+      "reason": "Grund",
+      "deleted": "Gelöscht"
+    }
   }
 }

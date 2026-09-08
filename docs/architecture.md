@@ -456,6 +456,25 @@ Three rules follow, and each one is a bug we hit rather than a precaution:
   never be accepted"; dropping a change because the server was briefly broken
   loses data the user believes is saved.
 
+### 6.3a Audit trail (FR-10.2)
+
+Every ledger write already stored the entry's previous state in `entry_history`
+with the actor and a timestamp — since M3, and unread until now.
+`GET /trips/:id/entries/:eid/history` returns those revisions oldest first,
+plus the row as it stands.
+
+The chain is the thing to keep straight: **a history row holds the state BEFORE
+the change it records**, so revision *n* paired with whatever follows it — the
+next revision, or the current entry — is one edit. Creation has no row of its
+own; it comes off the entry's `created_by` and `created_at`.
+
+Turning two snapshots into readable differences is `entryDiff` in the domain:
+pure, currency-agnostic, and shared by the client, tests and any future export.
+Money stays in wire form there, because only the UI knows how much of a share's
+eight decimals is worth printing. Actor display names are resolved server-side,
+since a member who never claimed a participant — or whose account is gone — has
+no name the client could look up.
+
 ### 6.4 Concurrency
 
 Optimistic: every entry carries `version`; `PATCH`/`DELETE` require

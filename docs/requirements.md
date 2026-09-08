@@ -446,7 +446,7 @@ an entry whose shares do not sum to its total.
 | ID | Priority | Requirement |
 |---|---|---|
 | FR-10.1 | M | Multiple people edit the same trip; changes appear for others without a manual refresh (poll or push). |
-| FR-10.2 | S | Full audit trail per entry: who created/edited/deleted, when, and what changed. |
+| FR-10.2 | S | Full audit trail per entry: who created/edited/deleted, when, and what changed. *Shipped for shared trips: `GET /trips/:id/entries/:eid/history` returns every recorded state with its actor, and the entry screen renders the differences. A local-only trip has no server and therefore no trail.* |
 | FR-10.3 | S | Trip activity feed. |
 | FR-10.4 | C | Push notification on new expense involving me, and on debt settled. |
 | FR-10.5 | C | Comments/emoji reactions on an entry (resolves "what was this €38.95 again?"). |

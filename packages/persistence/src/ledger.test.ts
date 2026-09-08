@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { eq, sql } from 'drizzle-orm';
 import {
-  type ParticipantId, type WireEntry, allocate, balances, currency, entryFromWire, entryToWire, localDate, money, P, toPrecise,
+  type ParticipantId, type WireEntry, allocate, balances, currency, entryDiff, entryFromWire, entryToWire, localDate, money, P, toPrecise,
 } from '@vst/domain';
 import { arbLedger } from '@vst/domain/testing';
 import { type Connection } from './db';
@@ -66,6 +66,42 @@ function expense(id: string, amount: bigint, payer: string, among: string[], ext
 describe('entries', () => {
   let f: Fixture;
   beforeEach(async () => { f = await fixture(); });
+
+  it('keeps an audit trail: who created it, and who changed what afterwards (FR-10.2)', async () => {
+    const w = expense(randomUUID(), 5518n, f.pids[0]!, f.pids);
+    await entryRepo.create(conn.db, f.tripId, w, f.userId);
+
+    // A fresh entry has no revisions yet — only the creation the entry itself records.
+    const first = await entryRepo.history(conn.db, f.tripId, w.id);
+    expect(first.revisions).toHaveLength(0);
+    expect(first.createdBy).toEqual({ userId: f.userId, displayName: 'Robert' });
+    expect(first.current.version).toBe(1);
+
+    // Someone else renames it, then deletes it.
+    const otherId = randomUUID();
+    await userRepo.create(conn.db, { id: otherId, email: `${otherId}@test`, displayName: 'Max' });
+    await entryRepo.update(conn.db, f.tripId, { ...w, description: 'renamed' }, 1, otherId);
+    await entryRepo.setDeleted(conn.db, f.tripId, w.id, 2, true, f.userId);
+
+    const h = await entryRepo.history(conn.db, f.tripId, w.id);
+    expect(h.revisions.map((r) => r.version)).toEqual([1, 2]);
+    expect(h.revisions[0]?.actor).toEqual({ userId: otherId, displayName: 'Max' });
+    expect(h.revisions[1]?.actor).toEqual({ userId: f.userId, displayName: 'Robert' });
+    // Each row holds the state BEFORE its change, so the chain reconstructs every step.
+    expect(h.revisions[0]?.snapshot.description).toBe('x');
+    expect(h.revisions[1]?.snapshot.description).toBe('renamed');
+    expect(h.revisions[1]?.snapshot.deleted).toBeFalsy();
+    expect(h.current.deleted).toBe(true);
+    expect(entryDiff(h.revisions[0]!.snapshot, h.revisions[1]!.snapshot).fields)
+      .toEqual([{ field: 'description', from: 'x', to: 'renamed' }]);
+  });
+
+  it('an entry id from another trip has no history here', async () => {
+    const other = await fixture(2);
+    const w = expense(randomUUID(), 1000n, f.pids[0]!, f.pids);
+    await entryRepo.create(conn.db, f.tripId, w, f.userId);
+    await expect(entryRepo.history(conn.db, other.tripId, w.id)).rejects.toThrow(/not found/);
+  });
 
   it('round-trips an expense through the database exactly', async () => {
     const w = expense(randomUUID(), 5518n, f.pids[0]!, f.pids, { category: 'groceries' });
