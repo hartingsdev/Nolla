@@ -113,10 +113,21 @@ function allocateBase(base: Money, rule: SplitRule, seed: string): Share[] {
  * distribution of the 10⁻⁸ residual (P5). Tie-break rotates by `seed`.
  */
 function weighted(base: Money, ids: readonly ParticipantId[], weights: readonly bigint[], seed: string): Share[] {
-  const ccy: Currency = base.ccy;
-  const T = toPrecise(base).scaled;
+  const parts = apportion(toPrecise(base), weights, seed);
+  return ids.map((id, i) => ({ participantId: id, amount: parts[i] ?? precise(0n, base.ccy) }));
+}
+
+/**
+ * Split a Precise amount proportionally to integer weights so the parts sum
+ * EXACTLY to the amount. Weights must be non-negative with a positive sum.
+ * Used by `allocate` and by the ledger to apportion a share among payers.
+ */
+export function apportion(amount: Precise, weights: readonly bigint[], seed: string): Precise[] {
+  const ccy: Currency = amount.ccy;
+  const T = amount.scaled;
   const W = weights.reduce((a, b) => a + b, 0n);
-  const n = ids.length;
+  if (weights.some((w) => w < 0n) || W <= 0n) throw new DomainError('INVALID_SPLIT', 'weights must be non-negative with a positive sum');
+  const n = weights.length;
 
   const floors: bigint[] = [];
   const rems: bigint[] = [];
@@ -142,7 +153,7 @@ function weighted(base: Money, ids: readonly ParticipantId[], weights: readonly 
     floors[i] = (floors[i] ?? 0n) + 1n;
     residual -= 1n;
   }
-  return ids.map((id, i) => ({ participantId: id, amount: precise(floors[i] ?? 0n, ccy) }));
+  return floors.map((f) => precise(f, ccy));
 }
 
 function uniqueNonEmpty(ids: readonly ParticipantId[], msg: string): ParticipantId[] {

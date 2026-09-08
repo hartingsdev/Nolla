@@ -26,6 +26,8 @@ export const base = tseslint.config(
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      // Conflicts with no-non-null-assertion (strict); we prefer `?? fallback` over `!` anyway.
+      '@typescript-eslint/non-nullable-type-assertion-style': 'off',
     },
   },
   {
@@ -39,7 +41,7 @@ export const base = tseslint.config(
   },
   {
     // Tests may use `!` on values they just constructed.
-    files: ['**/*.test.ts'],
+    files: ['**/*.test.ts', '**/testing/**'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.config.*'] },

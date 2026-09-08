@@ -174,10 +174,10 @@ export function roundAll(values: readonly Precise[], total: Money, seed: string)
   const rems: bigint[] = new Array<bigint>(n);
   let floorSum = 0n;
   for (let i = 0; i < n; i++) {
-    const v = values[i] as Precise; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
+    const v = values[i] as Precise;
     floors[i] = floorDiv(v.scaled, f);
     rems[i] = floorMod(v.scaled, f);
-    floorSum += floors[i] as bigint; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
+    floorSum += floors[i] as bigint;
   }
   // Units still to hand out: 0 ≤ residual < n, because every remainder is < f.
   let residual = total.minor - floorSum;
@@ -185,8 +185,8 @@ export function roundAll(values: readonly Precise[], total: Money, seed: string)
   // Order: larger remainder first; among equals, rotated stable index order.
   const start = seedIndex(seed, n);
   const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => {
-    const ra = rems[a] as bigint; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
-    const rb = rems[b] as bigint; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
+    const ra = rems[a] as bigint;
+    const rb = rems[b] as bigint;
     if (ra !== rb) return ra > rb ? -1 : 1;
     return ((a - start + n) % n) - ((b - start + n) % n);
   });
@@ -194,7 +194,7 @@ export function roundAll(values: readonly Precise[], total: Money, seed: string)
   const out = floors.map((fl) => money(fl, ccy));
   for (const i of order) {
     if (residual <= 0n) break;
-    out[i] = money((floors[i] as bigint) + 1n, ccy); // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
+    out[i] = money((floors[i] as bigint) + 1n, ccy);
     residual -= 1n;
   }
   return out;

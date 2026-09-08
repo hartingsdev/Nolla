@@ -47,7 +47,7 @@ clock or float conversion) is enforced by ESLint and fails the build.
 
 - [x] M0 — scaffold, boundary rules, CI, local services
 - [x] M1 — money types, `roundAll` boundary, split allocation, property tests
-- [ ] M2 — ledger, balances, settlement, lifecycle, entitlements
+- [x] M2 — ledger, balances, gross matrix, three settlement plans, lifecycle, entitlements
 - [ ] M3 — schema + persistence (Drizzle)
 - [ ] M4 — identity
 - [ ] M5 — API (framework: to be decided — Hono or Fastify)
