@@ -10,6 +10,7 @@
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r --parallel test",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "dev": "node scripts/dev.mjs",
     "check:no-floats": "node scripts/check-no-floats.mjs"
   },
   "devDependencies": {

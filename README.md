@@ -86,6 +86,7 @@ path.
 
 ```
 pnpm install            # Node 24, pnpm 10 (see .nvmrc / packageManager)
+pnpm dev                # API on :8080 (PGlite) and the app on :8081, one Ctrl-C stops both
 pnpm check              # lint + typecheck + test, what CI runs
 pnpm --filter @vst/domain test:watch
 pnpm --filter @vst/mobile web         # the app in a browser (Expo web)
