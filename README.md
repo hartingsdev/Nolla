@@ -65,6 +65,23 @@ profile, and watch both sides converge.
 Expo Go. Set `EXPO_PUBLIC_API_URL` to your machine's LAN address if you want
 the phone to reach the dev API rather than `localhost`.
 
+**Without installing anything but Docker:**
+
+```
+docker compose -f docker-compose.app.yml up --build
+```
+
+App on <http://localhost:8081>, API on <http://localhost:8080>, magic links at
+<http://localhost:8080/dev/magic-links>. The first build installs the workspace
+and runs the Expo web export inside the image, so give it several minutes; after
+that `up` is quick.
+
+This is a local demo stack: the API keeps Postgres in-process (PGlite — the data
+is gone with the container), accepts fabricated identity tokens and serves the
+magic links above, so don't expose it. `docker-compose.yml` is the other thing —
+real Postgres, MinIO and Mailpit for development against the production code
+path.
+
 ## Development
 
 ```

@@ -1,0 +1,11 @@
+# Everything is installed and built inside the image; shipping the host's copies
+# would both bloat the context and risk a platform-wrong node_modules.
+node_modules
+**/node_modules
+**/dist
+apps/mobile/.expo
+apps/mobile/test-results
+apps/mobile/playwright-report
+.git
+.github
+docs

@@ -1,0 +1,37 @@
+# Run the whole thing without installing Node, pnpm or a database:
+#
+#   docker compose -f docker-compose.app.yml up --build     # first run builds, takes a while
+#   → app on http://localhost:8081, API on http://localhost:8080
+#
+# Sign in with any e-mail address; nothing is sent. The dev API captures the
+# magic link — read it at http://localhost:8080/dev/magic-links and open the URL.
+#
+# This is a LOCAL DEMO stack: the API runs Postgres in-process (PGlite, so data
+# is gone when the container is), accepts fabricated identity tokens and serves
+# the magic links above. Do not expose it. docker-compose.yml next to this file
+# is the other thing entirely — real Postgres, MinIO and Mailpit for development
+# against the production code path.
+name: vst-app
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: demo
+    environment:
+      PORT: "8080"
+      METRICS_PORT: "9464"
+      APP_BASE_URL: http://localhost:8081
+      CORS_ORIGINS: http://localhost:8081
+    ports: ["8080:8080"]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+      args:
+        # Baked into the bundle; the browser resolves it, so it is the host's address.
+        EXPO_PUBLIC_API_URL: http://localhost:8080
+    ports: ["8081:8081"]
+    depends_on: [api]
