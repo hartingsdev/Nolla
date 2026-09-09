@@ -125,5 +125,5 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] M5 — Hono API: trips, invites, participants, ledger + change feed, balances, settlement, lifecycle, metrics
 - [x] M6 — shared trips in the app: sign-in (magic link), invites, claiming, sync engine with outbox + change feed, conflict notices
 - [x] M9 — receipts (presigned uploads, retention job) and offline-write polish (queued badges, backoff, replay)
-- [x] v0.2 so far — CSV export (FR-7.8), share and percentage splits (FR-3.5), per-person tip (FR-3.7), adjustments (FR-6.1)
+- [x] v0.2 — CSV export (FR-7.8), share and percentage splits (FR-3.5), per-person tip (FR-3.7), adjustments in both shapes (FR-6), audit trail (FR-10.2), transfer dispute (FR-5.3), participant rename with history (FR-1.12)
 - [ ] M10–M11 — distribution (needs Apple/Google developer accounts), the trip

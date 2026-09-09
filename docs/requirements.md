@@ -401,7 +401,7 @@ an entry whose shares do not sum to its total.
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-6.1 | S | Book a manual adjustment with a **mandatory reason** (replaces `Umbuchung für die Gesamtzeile`). An adjustment is always two-sided — from one participant to another, or between one participant and the group split by the usual rules — so it has the same payments-in / shares-out shape as every other entry and cannot break Σ balances == 0 (I2). A one-sided "add €70 to Robert" is not expressible. *Shipped as the two-participant form (from → to, reason required); the split-among-the-group variant is still open.* |
+| FR-6.1 | S | Book a manual adjustment with a **mandatory reason** (replaces `Umbuchung für die Gesamtzeile`). An adjustment is always two-sided — from one participant to another, or between one participant and the group split by the usual rules — so it has the same payments-in / shares-out shape as every other entry and cannot break Σ balances == 0 (I2). A one-sided "add €70 to Robert" is not expressible. *Shipped in both shapes: person → person, and one person against the group split by the usual rules (either direction). The person is never on the group side — a correction they carry a slice of is just an expense.* |
 | FR-6.2 | S | Adjustments are visually distinct in the ledger and listed in the trip summary. *Shipped: 🧾 icon, own ledger filter, reason on the row and the detail, and their own section with a running total on the overview.* |
 | FR-6.3 | M | The app must never require an adjustment to make totals reconcile — FR-9.1 guarantees that. |
 
@@ -658,7 +658,8 @@ auth and deletion is expensive.
 shipped (D10), the entitlement service (D12), and retention metadata (D11) —
 each of them cheap now and invasive later.
 
-**v0.2 — "pleasant"**
+**v0.2 — "pleasant"** — complete as of this branch.
+
 Receipt purge job (FR-12.6), categories, receipts, per-share settled status (FR-7.4), gross matrix (FR-8.1),
 preferred-creditor routing (FR-8.5), tips (FR-3.7), weights/percentages
 (FR-3.5), ledger filters + drill-down, adjustments (FR-6), audit trail

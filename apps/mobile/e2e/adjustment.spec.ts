@@ -60,3 +60,46 @@ test('an adjustment without a reason cannot be saved (FR-6.1)', async ({ page })
   await page.getByLabel('Reason', { exact: true }).fill('Split a taxi we forgot to log');
   await expect(page.getByRole('button', { name: 'Save' })).toBeEnabled();
 });
+
+test('an adjustment between one person and the group (FR-6.1)', async ({ page }) => {
+  const before = await myBalance(page);
+
+  await page.goto('/entry/new');
+  await page.getByRole('button', { name: 'Adjustment', exact: true }).click();
+  await page.getByRole('button', { name: 'One person and the group' }).click();
+  await page.getByLabel('Amount').first().fill('80');
+  await page.getByLabel('Reason', { exact: true }).fill('Robert broke the lamp');
+
+  // Robert takes €80 on; the other four are credited €20 each.
+  await page.getByRole('button', { name: 'Robert', exact: true }).first().click();
+  await expect(page.getByText('Robert takes the amount on; the others are credited their share.')).toBeVisible();
+  await expect(page.getByText('€20.00 per person')).toBeVisible();   // the four others, Robert excluded
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // Yannik is one of the others, so he is €20 better off; the ledger still closes.
+  const after = await myBalance(page);
+  expect(after - before).toBe(2000n);
+  await expectBalancesSumToZero(page);
+
+  await page.goto('/ledger');
+  await page.getByRole('button', { name: 'Adjustment', exact: true }).click();
+  await expect(page.getByText(/Reason: Robert broke the lamp/)).toBeVisible();
+});
+
+test('the group can owe one person, which is the same correction the other way (FR-6.1)', async ({ page }) => {
+  const before = await myBalance(page);
+
+  await page.goto('/entry/new');
+  await page.getByRole('button', { name: 'Adjustment', exact: true }).click();
+  await page.getByRole('button', { name: 'One person and the group' }).click();
+  await page.getByLabel('Amount').first().fill('80');
+  await page.getByLabel('Reason', { exact: true }).fill('Robert paid the deposit alone');
+  await page.getByRole('button', { name: 'Robert', exact: true }).first().click();
+  await page.getByRole('button', { name: '…is owed by the others' }).click();
+  await expect(page.getByText('The others take the amount on; Robert is credited it.')).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  // Now Yannik carries €20 of it instead.
+  expect(await myBalance(page) - before).toBe(-2000n);
+  await expectBalancesSumToZero(page);
+});

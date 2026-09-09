@@ -45,6 +45,13 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const [refund, setRefund] = useState(initial ? initial.amount.minor < 0n : false);
   /** Mandatory on an adjustment (FR-6.1): a correction nobody can explain is worse than none. */
   const [reason, setReason] = useState(initial?.reason ?? '');
+  /**
+   * An adjustment has two shapes (FR-6.1): between two people, or between one
+   * person and the group. Reopening one tells them apart by counting sides.
+   */
+  const [adjGroup, setAdjGroup] = useState(() => (initial?.type === 'adjustment' && (initial.payments.length > 1 || initial.shares.length > 1)));
+  /** In the group shape: does the person owe the others, or the others them? */
+  const [owesGroup, setOwesGroup] = useState(() => (initial?.type === 'adjustment' ? initial.shares.length === 1 && initial.payments.length > 1 : true));
   const [date, setDate] = useState<string>(initial && !clone ? initial.date : todayLocal());
   const [category, setCategory] = useState<string | null>(initial?.category ?? null);
   // expense: payers (1..n) with per-payer amounts when several
@@ -90,7 +97,10 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   })();
   const parse = (raw: string | undefined): Money => { const n = normalizeAmountInput(raw ?? ''); return n === null ? zeroMoney(ccy) : moneyFromString(n, ccy); };
 
-  const selected = participants.filter((p) => among.has(p.id));
+  const groupShape = kind === 'adjustment' && adjGroup;
+  // The person on the single side is never also on the group side: an adjustment
+  // where they carry a slice of their own correction is just an expense.
+  const selected = participants.filter((p) => among.has(p.id) && !(groupShape && p.id === from));
   const exactAmounts = selected.map((p) => parse(exact[p.id]));
   // The tip is part of what was paid, so it comes off the top and the rest is split by the rule.
   const tip = refund ? zeroMoney(ccy) : parse(tipRaw);
@@ -109,7 +119,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   /** The rule the current inputs describe. `allocate` decides whether it is usable. */
   const rule: SplitRule | null = (() => {
     const ids = selected.map((p) => p.id as ParticipantId);
-    if (kind !== 'expense' || ids.length === 0) return null;
+    if ((kind === 'transfer' || (kind === 'adjustment' && !adjGroup)) || ids.length === 0) return null;
     switch (mode) {
       case 'equal': return { kind: 'equal', among: ids };
       case 'weights': return { kind: 'weights', weights: Object.fromEntries(selected.map((p) => [p.id, parseWeight(weights[p.id])])) };
@@ -147,7 +157,28 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     const createdAt = initial && !clone ? initial.createdAt : new Date().toISOString();
     try {
       let entry: Entry;
-      if (kind !== 'expense') {
+      if (groupShape) {
+        if (!from) { setError(t('entry.invalid.payer')); return; }
+        if (!reason.trim()) { setError(t('entry.invalid.reason')); return; }
+        if (!rule || selected.length === 0) { setError(t('entry.invalid.split')); return; }
+        const slice = allocate(amount, rule, { seed: id });
+        // One side is the person, the other is the group. Which side is which decides
+        // the direction: a payment is money in, a share is money out (§5, I1).
+        const groupMoney = roundAll(slice.map((x) => x.amount), amount, id);
+        entry = owesGroup
+          ? {
+              id, type: 'adjustment', description: description.trim() || t('entry.adjustmentDefault'), amount, date: localDate(date),
+              payments: selected.map((p, i) => ({ participantId: p.id as ParticipantId, amount: groupMoney[i] ?? zeroMoney(ccy) })),
+              shares: [{ participantId: from as ParticipantId, amount: toPrecise(amount) }],
+              createdAt, deleted: false, reason: reason.trim(),
+            }
+          : {
+              id, type: 'adjustment', description: description.trim() || t('entry.adjustmentDefault'), amount, date: localDate(date),
+              payments: [{ participantId: from as ParticipantId, amount }],
+              shares: slice,
+              createdAt, deleted: false, reason: reason.trim(),
+            };
+      } else if (kind !== 'expense') {
         if (!from || !to || from === to) { setError(t('entry.invalid.transfer')); return; }
         if (kind === 'adjustment' && !reason.trim()) { setError(t('entry.invalid.reason')); return; }
         entry = {
@@ -191,7 +222,9 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     || (mode === 'percent' && bpsResidual !== 0n);
   const disabled = !amount
     || (kind === 'expense' && (selected.length === 0 || splitIncomplete || (payerResidual !== null && !M.isZero(payerResidual))))
-    || (kind !== 'expense' && (!from || !to || from === to))
+    || (groupShape && (!from || selected.length === 0 || splitIncomplete))
+    || (kind === 'transfer' && (!from || !to || from === to))
+    || (kind === 'adjustment' && !adjGroup && (!from || !to || from === to))
     || (kind === 'adjustment' && !reason.trim());
 
   return (
@@ -222,6 +255,11 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         )}
         {kind === 'adjustment' && (
           <>
+            <H2>{t('entry.adjShape')}</H2>
+            <Row>
+              <Chip label={t('entry.adjPair')} selected={!adjGroup} onPress={() => { setAdjGroup(false); }} />
+              <Chip label={t('entry.adjGroup')} selected={adjGroup} onPress={() => { setAdjGroup(true); }} />
+            </Row>
             <H2>{t('entry.reason')}</H2>
             <TextInput value={reason} onChangeText={setReason} placeholder={t('entry.reasonPlaceholder')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.reason')} />
             <Body muted style={{ fontSize: 13 }}>{t('entry.reasonHint')}</Body>
@@ -234,15 +272,30 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         </Row>
       </Card>
 
-      {kind !== 'expense' ? (
+      {groupShape ? (
+        <Card>
+          <H2>{t('entry.adjPerson')}</H2>
+          <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={from === p.id} onPress={() => { setFrom(p.id); }} />)}</Row>
+          <Row>
+            <Chip label={t('entry.adjOwesGroup')} selected={owesGroup} onPress={() => { setOwesGroup(true); }} />
+            <Chip label={t('entry.adjGroupOwes')} selected={!owesGroup} onPress={() => { setOwesGroup(false); }} />
+          </Row>
+          <Body muted style={{ fontSize: 13 }}>
+            {t(owesGroup ? 'entry.adjOwesGroupHint' : 'entry.adjGroupOwesHint', { name: participants.find((p) => p.id === from)?.name ?? '?' })}
+          </Body>
+        </Card>
+      ) : kind !== 'expense' ? (
         <Card>
           <H2>{t('entry.from')}</H2>
           <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={from === p.id} onPress={() => { setFrom(p.id); }} />)}</Row>
           <H2>{t('entry.to')}</H2>
           <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={to === p.id} onPress={() => { setTo(p.id); }} disabled={from === p.id} />)}</Row>
         </Card>
-      ) : (
+      ) : null}
+
+      {(kind === 'expense' || groupShape) && (
         <>
+          {kind === 'expense' && (
           <Card>
             <H2>{multiPayer ? t('entry.payers') : t('entry.paidBy')}</H2>
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={payers.includes(p.id)} onPress={() => { togglePayer(p.id); }} />)}</Row>
@@ -263,11 +316,12 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
               </View>
             )}
           </Card>
+          )}
 
           <Card>
-            <H2>{t('entry.splitAmong')}</H2>
+            <H2>{groupShape ? t('entry.adjAmongGroup') : t('entry.splitAmong')}</H2>
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={among.has(p.id)} onPress={() => { toggleAmong(p.id); }} />)}</Row>
-            {!refund && (
+            {!refund && kind === 'expense' && (
               <Row style={{ justifyContent: 'space-between' }}>
                 <Body style={{ flex: 1 }}>{t('entry.tipPerPerson')}</Body>
                 <TextInput value={tipRaw} onChangeText={setTipRaw} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
