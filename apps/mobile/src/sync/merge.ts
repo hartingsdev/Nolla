@@ -15,7 +15,8 @@ export type OutboxOp =
   | { readonly opId: string; readonly kind: 'delete' | 'restore'; readonly entryId: string }
   | { readonly opId: string; readonly kind: 'settleShare'; readonly entryId: string; readonly participantId: string; readonly transferEntryId: string | null }
   | { readonly opId: string; readonly kind: 'dispute'; readonly entryId: string; readonly disputed: boolean; readonly reason?: string }
-  | { readonly opId: string; readonly kind: 'addParticipant'; readonly participant: { id: string; displayName: string; joinedAt: string } };
+  | { readonly opId: string; readonly kind: 'addParticipant'; readonly participant: { id: string; displayName: string; joinedAt: string } }
+  | { readonly opId: string; readonly kind: 'renameParticipant'; readonly participantId: string; readonly displayName: string };
 
 export interface TripState {
   readonly meta: TripMeta;
@@ -39,7 +40,10 @@ export function emptyTrip(meta: TripMeta): TripState {
   return { meta, participants: [], entries: [], meId: null, seq: '0', versions: {}, outbox: [], conflicts: {}, lastSyncAt: null, syncError: null, failedRounds: 0 };
 }
 
-const entryOf = (op: OutboxOp): string | null => op.kind === 'create' || op.kind === 'update' ? op.entry.id : op.kind === 'addParticipant' ? null : op.entryId;
+const entryOf = (op: OutboxOp): string | null =>
+  op.kind === 'create' || op.kind === 'update' ? op.entry.id
+  : op.kind === 'addParticipant' || op.kind === 'renameParticipant' ? null
+  : op.entryId;
 
 /**
  * Add an op, folding it into a pending op on the same entry so the server sees
@@ -50,6 +54,8 @@ const entryOf = (op: OutboxOp): string | null => op.kind === 'create' || op.kind
 const standalone = (op: OutboxOp): boolean => op.kind === 'settleShare' || op.kind === 'dispute';
 
 export function enqueue(outbox: readonly OutboxOp[], op: OutboxOp): OutboxOp[] {
+  const pid = renameOf(op);
+  if (pid !== null) return [...outbox.filter((o) => renameOf(o) !== pid), op];   // last name wins
   const id = entryOf(op);
   if (id === null || standalone(op)) return [...outbox, op];
   const idx = outbox.findIndex((o) => entryOf(o) === id && !standalone(o));
@@ -76,6 +82,9 @@ export function pendingEntryIds(state: TripState): Set<string> {
 }
 
 /** Merge a change-feed page. Entries with a pending local write keep the local version until it is pushed. */
+/** A participant rename is queued per participant; only the last one matters. */
+const renameOf = (op: OutboxOp): string | null => (op.kind === 'renameParticipant' ? op.participantId : null);
+
 export function applyFeed(state: TripState, feed: Feed): TripState {
   const entries = new Map(state.entries.map((e) => [e.id, e]));
   const versions = { ...state.versions };

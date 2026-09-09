@@ -153,6 +153,50 @@ describe('trips, invites, participants', () => {
 });
 
 describe('ledger', () => {
+  it('a member renames themselves, an admin renames anyone, a stranger renames nobody (FR-1.12)', async () => {
+    const a = await signIn('r1', 'robert@r.de');
+    const { tripId, me: adminPid } = await newTrip(a.token, 'Namen');
+    // The creator's participant is named after their sign-in address — the case this exists for.
+    expect((await call(`/trips/${tripId}`, { token: a.token })).body.participants[0].displayName).toBe('robert');
+
+    const maxPid = await addPlaceholder(a.token, tripId, 'Mx');
+    const inv = await call(`/trips/${tripId}/invites`, { method: 'POST', token: a.token });
+    const b = await signIn('r2', 'max@r.de');
+    await call(`/invites/${inv.body.url.split('/i/')[1]}/accept`, { method: 'POST', token: b.token });
+    await call(`/trips/${tripId}/participants/${maxPid}/claim`, { method: 'POST', token: b.token });
+
+    // Max fixes his own name.
+    const own = await call(`/trips/${tripId}/participants/${maxPid}`, { ...json({ displayName: 'Max' }), method: 'PATCH', token: b.token });
+    expect(own.status).toBe(200);
+    expect(own.body.displayName).toBe('Max');
+
+    // Max is not an admin, so he cannot rename Robert.
+    const other = await call(`/trips/${tripId}/participants/${adminPid}`, { ...json({ displayName: 'Blödmann' }), method: 'PATCH', token: b.token });
+    expect(other.status).toBe(403);
+
+    // Robert, the admin, renames himself and Max.
+    expect((await call(`/trips/${tripId}/participants/${adminPid}`, { ...json({ displayName: 'Robert' }), method: 'PATCH', token: a.token })).status).toBe(200);
+    expect((await call(`/trips/${tripId}/participants/${maxPid}`, { ...json({ displayName: 'Maximilian' }), method: 'PATCH', token: a.token })).status).toBe(200);
+
+    // Each row holds the name BEFORE its change, oldest first.
+    const names = await call(`/trips/${tripId}/participants/${maxPid}/names`, { token: a.token });
+    expect(names.body.names.map((n: { displayName: string }) => n.displayName)).toEqual(['Mx', 'Max']);
+
+    // A rename reaches the other phone through the change feed.
+    const feed = await call(`/trips/${tripId}/entries?since=0`, { token: b.token });
+    expect(feed.body.participants.find((p: { id: string }) => p.id === maxPid).displayName).toBe('Maximilian');
+
+    // A name of blanks is not a name — it would render as an invisible participant.
+    expect((await call(`/trips/${tripId}/participants/${maxPid}`, { ...json({ displayName: '  ' }), method: 'PATCH', token: a.token })).status).toBe(400);
+    expect((await call(`/trips/${tripId}/participants`, { ...json({ id: crypto.randomUUID(), displayName: ' ' }), token: a.token })).status).toBe(400);
+    // …and a name with stray spaces is stored trimmed.
+    const trimmed = await call(`/trips/${tripId}/participants/${maxPid}`, { ...json({ displayName: '  Maxi  ' }), method: 'PATCH', token: a.token });
+    expect(trimmed.body.displayName).toBe('Maxi');
+    // Someone outside the trip sees nothing at all.
+    const c2 = await signIn('r3', 'fremd@r.de');
+    expect((await call(`/trips/${tripId}/participants/${maxPid}`, { ...json({ displayName: 'X' }), method: 'PATCH', token: c2.token })).status).toBe(404);
+  });
+
   it('only the recipient can dispute a payment, and the money does not move (FR-5.3)', async () => {
     const a = await signIn('d1', 'robert@d.de');
     const { tripId, me: robert } = await newTrip(a.token, 'Streitfall');

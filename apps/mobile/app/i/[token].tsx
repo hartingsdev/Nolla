@@ -42,7 +42,16 @@ export default function Invite() {
   };
   const claim = async () => {
     if (state === 'loading' || state === 'invalid') return;
-    if (chosen) { await api.claimParticipant(state.tripId, chosen); await finish(state.tripId, chosen); return; }
+    if (chosen) {
+      await api.claimParticipant(state.tripId, chosen);
+      // The placeholder was named by whoever created it; the person it turned out
+      // to be gets the last word on their own name (FR-1.12).
+      const wanted = newName.trim();
+      const was = state.unclaimed.find((p) => p.id === chosen)?.displayName;
+      if (wanted && wanted !== was) await api.renameParticipant(state.tripId, chosen, wanted);
+      await finish(state.tripId, chosen);
+      return;
+    }
     const id = uuidv7();
     await api.addParticipant(state.tripId, { id, displayName: newName.trim() });
     await api.claimParticipant(state.tripId, id);
@@ -57,9 +66,9 @@ export default function Invite() {
     <Screen>
       <Card>
         <H2>{t('invite.whoAreYou')}</H2>
-        <Row>{state.unclaimed.map((p) => <Chip key={p.id} label={p.displayName} selected={chosen === p.id} onPress={() => { setChosen(chosen === p.id ? null : p.id); setNewName(''); }} />)}</Row>
-        <H2>{t('invite.newParticipant')}</H2>
-        <TextInput value={newName} onChangeText={(v) => { setNewName(v); setChosen(null); }} placeholder={t('invite.namePlaceholder')} placeholderTextColor={th.muted}
+        <Row>{state.unclaimed.map((p) => <Chip key={p.id} label={p.displayName} selected={chosen === p.id} onPress={() => { setChosen(chosen === p.id ? null : p.id); setNewName(chosen === p.id ? '' : p.displayName); }} />)}</Row>
+        <H2>{chosen ? t('invite.yourName') : t('invite.newParticipant')}</H2>
+        <TextInput value={newName} onChangeText={(v) => { setNewName(v); }} placeholder={t('invite.namePlaceholder')} placeholderTextColor={th.muted}
           style={{ backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: th.border }} accessibilityLabel={t('invite.namePlaceholder')} />
         <Button label={t('invite.join')} onPress={() => { void claim(); }} disabled={!chosen && !newName.trim()} />
       </Card>

@@ -11,6 +11,7 @@ export interface SyncApi {
   settleShare(tripId: string, entryId: string, participantId: string, transferEntryId: string | null): Promise<null>;
   addParticipant(tripId: string, p: { id: string; displayName: string; joinedAt?: string }): Promise<Feed['participants'][number]>;
   setDispute(tripId: string, entryId: string, ifMatch: number, dispute: { reason?: string } | null): Promise<EntryRecord>;
+  renameParticipant(tripId: string, pid: string, displayName: string): Promise<Feed['participants'][number]>;
 }
 
 /** The engine reads and writes trip state through this, so the store stays the single owner. */
@@ -95,6 +96,7 @@ async function pushOne(tripId: string, op: OutboxOp, state: TripState, api: Sync
     case 'settleShare': await api.settleShare(tripId, op.entryId, op.participantId, op.transferEntryId); return undefined;
     case 'dispute': return api.setDispute(tripId, op.entryId, v(op.entryId), op.disputed ? { ...(op.reason !== undefined ? { reason: op.reason } : {}) } : null);
     case 'addParticipant': await api.addParticipant(tripId, op.participant); return undefined;
+    case 'renameParticipant': await api.renameParticipant(tripId, op.participantId, op.displayName); return undefined;
   }
 }
 

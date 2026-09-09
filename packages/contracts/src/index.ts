@@ -77,7 +77,11 @@ export const patchTrip = z.object({
 });
 export const transition = z.object({ action: lifecycleAction });
 
-export const addParticipant = z.object({ id: uuid, displayName: z.string().min(1).max(60), joinedAt: isoDate.optional() });
+/** Trimmed before the length check: a name of blanks would render as an invisible participant. */
+const displayName = z.string().trim().min(1).max(60);
+export const addParticipant = z.object({ id: uuid, displayName, joinedAt: isoDate.optional() });
+/** FR-1.12: the person themselves, or a trip admin, corrects a participant's name. */
+export const renameParticipant = z.object({ displayName });
 
 export const providerSignIn = z.object({ token: z.string().min(10).max(8192) });
 export const emailRequest = z.object({ email: z.string().max(254) });

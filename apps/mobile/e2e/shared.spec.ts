@@ -218,3 +218,52 @@ test('the recipient disputes a payment; both phones see it and the balances do n
   await robert.getByRole('button', { name: 'Withdraw dispute' }).click();
   await expect(robert.getByText(/^Disputed by/)).toHaveCount(0);
 });
+
+test('a joiner names themselves, an admin corrects a name, and the old ones stay visible (FR-1.12)', async ({ browser }) => {
+  const ownerEmail = `nm-o-${Date.now()}@t.de`;
+  const ownerName = ownerEmail.split('@')[0]!;
+  const owner = await newUser(browser, ownerEmail);
+  await owner.getByLabel('Trip name').fill('Namen');
+  await owner.getByRole('button', { name: 'New shared trip' }).click();
+  await expect(owner.getByRole('heading', { name: 'Namen' })).toBeVisible();
+
+  // The creator is named after their sign-in address until someone fixes it.
+  await owner.goto('/participants');
+  await expect(owner.getByText(`${ownerName} (you)`)).toBeVisible();
+
+  await owner.getByLabel('Name').fill('Mx');
+  await owner.getByRole('button', { name: 'OK' }).click();
+  await owner.goto('/settings');
+  await owner.getByRole('button', { name: 'Create invite link' }).click();
+  const inviteUrl = (await owner.getByText(/\/i\//).innerText()).trim();
+
+  // Joining: the placeholder's name is offered, and the person it turned out to be corrects it.
+  const max = await newUser(browser, `nm-m-${Date.now()}@t.de`);
+  await max.goto(inviteUrl);
+  await max.getByRole('button', { name: 'Mx', exact: true }).click();
+  await expect(max.getByText('Your name in this trip')).toBeVisible();
+  await max.getByLabel('Your name').fill('Max');
+  await max.getByRole('button', { name: 'Join' }).click();
+  await expect(max.getByRole('heading', { name: 'Namen' })).toBeVisible();
+
+  await max.goto('/participants');
+  await expect(max.getByText(/^Max \(you\)/)).toBeVisible();
+  await expect(max.getByText(/Formerly: Mx/)).toBeVisible();
+
+  // A member may rename themselves but is offered nothing for anyone else.
+  expect(await max.getByRole('button', { name: 'Rename' }).count()).toBe(1);
+
+  // The owner is an admin: they can rename themselves and everyone else.
+  await owner.goto('/participants');
+  await expect(owner.getByText(/^Max/)).toBeVisible({ timeout: 25_000 });
+  expect(await owner.getByRole('button', { name: 'Rename' }).count()).toBe(2);
+  await owner.getByRole('button', { name: 'Rename' }).first().click();
+  await owner.getByLabel('Rename').fill('Robert');
+  await owner.getByRole('button', { name: 'Save' }).click();
+  await expect(owner.getByText(/^Robert \(you\)/)).toBeVisible();
+  await expect(owner.getByText(`Formerly: ${ownerName}`)).toBeVisible({ timeout: 20_000 });
+
+  // The rename reaches the other phone, and the ledger still adds up.
+  await max.goto('/participants');
+  await expect(max.getByText(/^Robert/)).toBeVisible({ timeout: 25_000 });
+});

@@ -45,6 +45,8 @@ interface Actions {
   readonly setDispute: (entryId: string, dispute: { reason?: string } | null) => void;
   readonly addParticipant: (p: Participant, joinedAt: string) => void;
   readonly removeParticipant: (id: string) => void;
+  /** FR-1.12: correct a participant's name — your own, or anyone's if you are an admin. */
+  readonly renameParticipant: (id: string, displayName: string) => void;
   readonly setMe: (id: string | null) => void;
   readonly setStatus: (status: TripStatus) => void;
   readonly setTripMeta: (patch: Partial<Pick<TripMeta, 'name' | 'ccy'>>) => void;
@@ -115,6 +117,14 @@ export const useStore = create<State & Actions>()(
           );
         },
         addParticipant: (p, joinedAt) => { change((t) => ({ ...t, participants: [...t.participants, p] }), () => ({ opId: opId(), kind: 'addParticipant', participant: { id: p.id, displayName: p.name, joinedAt } })); },
+        renameParticipant: (id, displayName) => {
+          const name = displayName.trim();
+          if (!name) return;
+          change(
+            (t) => ({ ...t, participants: t.participants.map((p) => (p.id === id ? { ...p, name } : p)) }),
+            () => ({ opId: opId(), kind: 'renameParticipant', participantId: id, displayName: name }),
+          );
+        },
         removeParticipant: (id) => { change((t) => ({ ...t, participants: t.participants.filter((p) => p.id !== id), meId: t.meId === id ? null : t.meId })); },
         setMe: (meId) => { change((t) => ({ ...t, meId })); },
         setStatus: (status) => { change((t) => ({ ...t, meta: { ...t.meta, status } })); },

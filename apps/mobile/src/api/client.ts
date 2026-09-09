@@ -50,6 +50,8 @@ export class ApiClient {
   createInvite(tripId: string) { return this.request<{ url: string; expiresAt: string }>('POST', `/trips/${tripId}/invites`); }
   acceptInvite(token: string) { return this.request<{ tripId: string; participantId: string | null; unclaimed: { id: string; displayName: string }[] }>('POST', `/invites/${encodeURIComponent(token)}/accept`); }
   addParticipant(tripId: string, p: { id: string; displayName: string; joinedAt?: string }) { return this.request<Feed['participants'][number]>('POST', `/trips/${tripId}/participants`, { body: p }); }
+  renameParticipant(tripId: string, pid: string, displayName: string) { return this.request<Feed['participants'][number]>('PATCH', `/trips/${tripId}/participants/${pid}`, { body: { displayName } }); }
+  participantNames(tripId: string, pid: string) { return this.request<{ names: { displayName: string; at: string; changedBy: string | null }[] }>('GET', `/trips/${tripId}/participants/${pid}/names`); }
   claimParticipant(tripId: string, pid: string) { return this.request<Feed['participants'][number]>('POST', `/trips/${tripId}/participants/${pid}/claim`); }
   // ledger
   pull(tripId: string, since: string, limit = 500) { return this.request<Feed>('GET', `/trips/${tripId}/entries?since=${since}&limit=${String(limit)}`); }

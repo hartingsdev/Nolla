@@ -49,6 +49,7 @@ class FakeApi implements SyncApi {
     return this.bump(dispute ? { ...rest, dispute: { at: 'now', by: 'p2', ...dispute } } : rest, cur.version + 1);
   }
   async addParticipant(_t: string, p: { id: string; displayName: string }) { this.guard('participant'); return { id: p.id, displayName: p.displayName, userId: null, joinedAt: '2026-09-01', tombstonedAt: null, seq: '1' }; }
+  async renameParticipant(_t: string, pid: string, displayName: string) { this.guard('rename'); return { id: pid, displayName, userId: null, joinedAt: '2026-09-01', tombstonedAt: null, seq: '2' }; }
   /** Someone else edits on the server. */
   serverEdit(id: string, description: string) { const cur = this.rows.get(id)!; this.bump({ ...cur, description }, cur.version + 1); }
 }
@@ -162,6 +163,16 @@ describe('syncTrip', () => {
     await syncTrip('trip', api, store);
     expect(store.state.conflicts[a.id]?.description).toBe('mine');
     expect(store.state.entries[0]?.description).toBe('theirs');
+  });
+
+  it('only the last rename of a participant is sent (FR-1.12)', () => {
+    let ob = enqueue([], { opId: '1', kind: 'renameParticipant', participantId: 'p1', displayName: 'Mx' });
+    ob = enqueue(ob, { opId: '2', kind: 'renameParticipant', participantId: 'p1', displayName: 'Max' });
+    ob = enqueue(ob, { opId: '3', kind: 'renameParticipant', participantId: 'p2', displayName: 'Robert' });
+    expect(ob).toEqual([
+      { opId: '2', kind: 'renameParticipant', participantId: 'p1', displayName: 'Max' },
+      { opId: '3', kind: 'renameParticipant', participantId: 'p2', displayName: 'Robert' },
+    ]);
   });
 
   it('a dispute rides alongside the entry instead of folding into a pending edit (FR-5.3)', async () => {

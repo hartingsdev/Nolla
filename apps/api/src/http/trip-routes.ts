@@ -3,7 +3,8 @@ import { HTTPException } from 'hono/http-exception';
 import { zValidator } from '@hono/zod-validator';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import {
-  addParticipant, changesQuery, createTrip, disputeBody, patchTrip, settleShare, settlementQuery, transition as transitionBody, wireEntry,
+  addParticipant, changesQuery, createTrip, disputeBody, patchTrip, renameParticipant, settleShare, settlementQuery,
+  transition as transitionBody, wireEntry,
 } from '@vst/contracts';
 import {
   type Balances, type ParticipantId, type PlanOptions, balances, currency, entryFromWire, grossMatrix, moneyToString, preciseToString,
@@ -97,6 +98,26 @@ export function tripRoutes(deps: AppDeps) {
     return jsonBig(c, await participantRepo.add(db, { id: body.id, tripId: trip.id, displayName: body.displayName, joinedAt: body.joinedAt ?? clock.today(trip.timezone) }), 201);
   });
   app.post('/trips/:tripId/participants/:pid/claim', async (c) => jsonBig(c, await participantRepo.claim(db, c.get('tripId'), c.req.param('pid'), c.get('userId'))));
+
+  /**
+   * FR-1.12: rename a participant. Yourself, or anyone if you are an admin —
+   * the two cases people actually need are "the name I was given is not mine"
+   * and "someone typed a placeholder wrong".
+   */
+  app.patch('/trips/:tripId/participants/:pid', zValidator('json', renameParticipant), async (c) => {
+    const tripId = c.get('tripId');
+    const pid = c.req.param('pid');
+    const people = await participantRepo.list(db, tripId);
+    const target = people.find((p) => p.id === pid);
+    if (!target) throw new HTTPException(404, { message: `participant ${pid} not found` });
+    if (target.userId !== c.get('userId') && c.get('role') !== 'admin') {
+      throw new HTTPException(403, { message: 'only this participant or an admin can rename them' });
+    }
+    return jsonBig(c, await participantRepo.rename(db, tripId, pid, c.req.valid('json').displayName, c.get('userId')));
+  });
+
+  app.get('/trips/:tripId/participants/:pid/names', async (c) =>
+    jsonBig(c, { names: await participantRepo.nameHistory(db, c.get('tripId'), c.req.param('pid')) }));
   app.delete('/trips/:tripId/participants/:pid', async (c) => {
     requireAdmin(c);
     await participantRepo.remove(db, c.get('tripId'), c.req.param('pid'));

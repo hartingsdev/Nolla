@@ -334,6 +334,7 @@ Priority uses MoSCoW: **M** = must (MVP), **S** = should (v1), **C** = could
 | FR-1.9 | M | **In-app account deletion** that removes the account and its personal data, per App Store guideline 5.1.1(v). Deleting an account with a non-zero balance must not corrupt other members' ledgers: the participant is tombstoned (display name retained, identity detached) and the trip's entries stay intact. |
 | FR-1.10 | M | **Sign in with Apple** offered wherever Google sign-in is offered, per Apple's equivalent-option rule. |
 | FR-1.11 | S | Placeholder participants (FR-1.3) are promoted to real members by claiming them after sign-in; all their historical shares follow the claim. |
+| FR-1.12 | S | A participant's **display name can be corrected**: by the person themselves (including when they join and claim a placeholder someone else named), or by a trip admin. Every previous name is kept and shown, because in a shared trip a name is how everyone else recognises whose money an entry is — a silent change rewrites the past for them. Names are labels: the ledger references participant ids, so a rename never moves money, and it is allowed whatever the trip's status. |
 
 **Acceptance (FR-1.2):** opening the share link on a fresh phone leads to
 sign-in, then to the trip, then to claiming a participant slot — with the whole

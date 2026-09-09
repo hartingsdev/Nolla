@@ -156,6 +156,16 @@ export const entryHistory = pgTable('entry_history', {
   snapshot: jsonb('snapshot').notNull(),
 }, (t) => [index('entry_history_entry_idx').on(t.entryId, t.version)]);
 
+/** Previous display names of a participant (FR-1.12); each row holds the name BEFORE its change. */
+export const participantNames = pgTable('participant_names', {
+  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  participantId: uuid('participant_id').notNull().references(() => participants.id, { onDelete: 'cascade' }),
+  tripId: uuid('trip_id').notNull().references(() => trips.id, { onDelete: 'cascade' }),
+  displayName: text('display_name').notNull(),
+  changedBy: uuid('changed_by').references(() => users.id),
+  at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('participant_names_participant_idx').on(t.participantId, t.at)]);
+
 export const schemaMigrations = pgTable('schema_migrations', {
   name: text('name').primaryKey(),
   appliedAt: timestamp('applied_at', { withTimezone: true }).notNull().defaultNow(),

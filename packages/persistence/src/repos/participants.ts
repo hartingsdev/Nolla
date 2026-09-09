@@ -1,7 +1,7 @@
-import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import { type Db } from '../db';
 import { ForbiddenWriteError, NotFoundError } from '../errors';
-import { participants, payments, shares } from '../schema';
+import { participantNames, participants, payments, shares } from '../schema';
 import { nextSeq, tripRepo } from './trips';
 
 export interface ParticipantRow {
@@ -41,6 +41,38 @@ export const participantRepo = {
   async list(db: Db, tripId: string): Promise<ParticipantRow[]> {
     const rows = await db.query.participants.findMany({ where: eq(participants.tripId, tripId), orderBy: participants.createdAt });
     return rows.map(toRow);
+  },
+
+  /**
+   * Correct a participant's display name (FR-1.12), keeping what it was before.
+   *
+   * Nothing in the ledger moves: shares and payments reference participant ids,
+   * so a name is a label on top of the money and never part of it. The previous
+   * name is kept because in a shared trip a name is how everyone else identifies
+   * whose money this is — a silent change would rewrite the past for them.
+   *
+   * Deliberately not gated on the trip's status: a name is not a ledger write,
+   * and a wrong one on a closed trip is exactly when you want it fixed.
+   */
+  async rename(db: Db, tripId: string, participantId: string, displayName: string, actor: string | null): Promise<ParticipantRow> {
+    return db.transaction(async (tx) => {
+      const p = await tx.query.participants.findFirst({ where: and(eq(participants.id, participantId), eq(participants.tripId, tripId)) });
+      if (!p) throw new NotFoundError(`participant ${participantId}`);
+      if (p.displayName === displayName) return toRow(p);
+      const seq = await nextSeq(tx, tripId);
+      await tx.insert(participantNames).values({ participantId, tripId, displayName: p.displayName, changedBy: actor });
+      const [row] = await tx.update(participants).set({ displayName, seq }).where(eq(participants.id, participantId)).returning();
+      return toRow(row as typeof participants.$inferSelect);
+    });
+  },
+
+  /** What this participant was called before, oldest first (FR-1.12). */
+  async nameHistory(db: Db, tripId: string, participantId: string): Promise<{ displayName: string; at: string; changedBy: string | null }[]> {
+    const rows = await db.query.participantNames.findMany({
+      where: and(eq(participantNames.participantId, participantId), eq(participantNames.tripId, tripId)),
+      orderBy: asc(participantNames.at),
+    });
+    return rows.map((r) => ({ displayName: r.displayName, at: r.at.toISOString(), changedBy: r.changedBy }));
   },
 
   /** Claim a placeholder for a user (FR-1.11): all history follows because shares/payments point at the participant. */
