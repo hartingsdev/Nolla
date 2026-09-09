@@ -12,6 +12,9 @@ import { Text } from 'react-native';
 
 type Kind = 'bilateral' | 'optimal' | 'hub';
 
+/** Stable identity: usePlan memoises on the options object. */
+const BILATERAL = { kind: 'bilateral' } as const;
+
 export default function Settle() {
   const { t, i18n } = useTranslation();
   const participants = useParticipants();
@@ -31,6 +34,10 @@ export default function Settle() {
     return { kind: 'bilateral' };
   }, [kind, hubId]);
   const plan = usePlan(opts);
+  // The comparison FR-8.3 asks for: everything is measured against the plan the
+  // group builds by hand, where everyone pays exactly the person they owe.
+  const byHand = usePlan(BILATERAL);
+  const saved = byHand.transfers.length - plan.transfers.length;
   const locale = i18n.language;
 
   const markPaid = (tr: Transfer) => {
@@ -98,7 +105,11 @@ export default function Settle() {
         <Body muted>
           {t('settle.transfers', { count: plan.transfers.length })}
           {kind === 'optimal' ? ` · ${plan.minimal ? t('settle.minimal') : t('settle.heuristic')}` : ''}
+          {kind !== 'bilateral' && byHand.transfers.length > 0
+            ? ` · ${saved > 0 ? t('settle.saved', { count: saved }) : t('settle.savedNone')}`
+            : ''}
         </Body>
+        <Body muted style={{ fontSize: 13 }}>{t(`settle.why.${kind}`, { name: names.get(hubId) ?? '?' })}</Body>
       </Card>
 
       <Card>

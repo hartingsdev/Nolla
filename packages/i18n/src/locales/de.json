@@ -138,6 +138,14 @@
     "transfers_other": "{{count}} Überweisungen",
     "minimal": "nachweislich minimal",
     "heuristic": "Heuristik",
+    "saved_one": "{{count}} Überweisung weniger als beim direkten Bezahlen",
+    "saved_other": "{{count}} Überweisungen weniger als beim direkten Bezahlen",
+    "savedNone": "nicht weniger als beim direkten Bezahlen",
+    "why": {
+      "bilateral": "Jeder zahlt genau dem, dem er schuldet. Die meisten Überweisungen, aber kein Geld läuft über Dritte.",
+      "optimal": "Die wenigsten Überweisungen, die alle Salden ausgleichen. Manche gehen an jemanden, dem du nie direkt geschuldet hast.",
+      "hub": "Alle rechnen nur mit {{name}} ab — je eine Überweisung. {{name}} übernimmt alle übrigen."
+    },
     "nothing": "Alle sind quitt.",
     "markPaid": "Als bezahlt markieren",
     "pays": "{{from}} zahlt an {{to}}",

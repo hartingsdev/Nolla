@@ -138,6 +138,14 @@
     "transfers_other": "{{count}} transfers",
     "minimal": "provably minimal",
     "heuristic": "heuristic",
+    "saved_one": "{{count}} transfer fewer than paying who you owe",
+    "saved_other": "{{count}} transfers fewer than paying who you owe",
+    "savedNone": "no fewer than paying who you owe",
+    "why": {
+      "bilateral": "Everyone pays exactly the person they owe. The most transfers, and no money passes through anyone else.",
+      "optimal": "The fewest transfers that clear every balance. Some of them go to someone you never owed directly.",
+      "hub": "Everyone settles with {{name}} alone — one transfer each. {{name}} makes or receives all the rest."
+    },
     "nothing": "Everyone is settled.",
     "markPaid": "Mark paid",
     "pays": "{{from}} pays {{to}}",

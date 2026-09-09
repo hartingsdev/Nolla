@@ -424,8 +424,8 @@ an entry whose shares do not sum to its total.
 |---|---|---|
 | FR-8.1 | S | Gross debt matrix, who-owes-whom before netting (sheet rows 42–46). |
 | FR-8.2 | M | **Bilateral netting** view — the plan the group builds by hand today, so the numbers read as familiar: you pay the person you actually owe. |
-| FR-8.3 | M | **Optimal settlement**: minimal set of transfers clearing all balances; show the transfer count saved vs bilateral. |
-| FR-8.4 | S | Let the user choose the algorithm; explain the trade-off (fewest transfers vs "I pay the person I actually owe"). |
+| FR-8.3 | M | **Optimal settlement**: minimal set of transfers clearing all balances; show the transfer count saved vs bilateral. *Shipped: every plan but bilateral itself states what it saves against it.* |
+| FR-8.4 | S | Let the user choose the algorithm; explain the trade-off (fewest transfers vs "I pay the person I actually owe"). *Shipped: one line under the chosen plan says what it costs and what it buys.* |
 | FR-8.5 | S | Pin a hub ("route everything through Robert"): every other member makes or receives exactly one transfer, with the hub; the hub handles up to n−1. Total transfers are exactly the number of non-hub members with a non-zero balance — never fewer than optimal (FR-8.3), often equal, and simpler to execute. Show the count next to the other plans. *Confirmed in scope (D6).* |
 | FR-8.6 | M | Every proposed transfer is one tap away from being recorded as a real transfer (FR-5.4). |
 | FR-8.7 | S | Trip lifecycle: `open` → **`settling`** (an admin freezes the plan; no new expenses, transfers still recorded against it; balances visibly count down) → **`closed`** (automatic once every balance is zero at `Money` precision, I5; read-only). An admin can move `settling` back to `open` — logged — if an expense was forgotten; `closed` → `open` also requires an admin and is logged. |
