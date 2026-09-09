@@ -391,7 +391,7 @@ an entry whose shares do not sum to its total.
 |---|---|---|
 | FR-5.1 | M | Record a payment from participant A to participant B with amount and date (the `Zahlung` rows). It changes balances but adds €0 to trip cost. |
 | FR-5.2 | M | Transfers appear in the ledger, filterable and separable from expenses. |
-| FR-5.3 | S | A recorded transfer counts toward balances immediately (as the sheet's `Zahlung` rows do). The recipient is notified and can **dispute** it; a disputed transfer stays in the balance but is flagged on both members' views until resolved or deleted. |
+| FR-5.3 | S | A recorded transfer counts toward balances immediately (as the sheet's `Zahlung` rows do). The recipient is notified and can **dispute** it; a disputed transfer stays in the balance but is flagged on both members' views until resolved or deleted. *Shipped: recipient-only, enforced server-side; flagged in the ledger, on the overview and on the entry; withdrawn by the person who raised it. The notification itself waits for push (FR-10.4) — until then it surfaces on next sync.* |
 | FR-5.4 | S | One-tap "settle up" that pre-fills a transfer from the settlement plan. |
 | FR-5.5 | C | Deep-link to PayPal.me / generate SEPA QR (EPC) or a copyable IBAN block for the recipient. |
 | FR-5.6 | W | Executing the payment inside the app. |

@@ -11,6 +11,7 @@ import { useStore } from '../../../src/store';
 import { useTheme } from '../../../src/theme';
 import { Receipts } from '../../../src/components/Receipts';
 import { History } from '../../../src/components/History';
+import { Dispute } from '../../../src/components/Dispute';
 import { Amount, Body, Button, Card, Chip, Divider, H1, H2, Row, Screen } from '../../../src/components/ui';
 
 export default function EntryDetail() {
@@ -111,6 +112,7 @@ export default function EntryDetail() {
           })}
         </Card>
       )}
+      <Dispute entry={e} />
       {!e.deleted && <Receipts entryId={e.id} editable={editable} />}
       <History entryId={e.id} />
       {e.deleted

@@ -498,6 +498,26 @@ eight decimals is worth printing. Actor display names are resolved server-side,
 since a member who never claimed a participant — or whose account is gone — has
 no name the client could look up.
 
+### 6.3b Dispute (FR-5.3)
+
+A recipient can flag a payment they do not recognise. Migration `0002` adds
+`disputed_at`, `disputed_by` and `dispute_reason` to `entries`, with CHECK
+constraints that only a transfer can carry them and that they travel together.
+
+The load-bearing decision is what a dispute is *not*: it never touches the money.
+The transfer keeps counting toward the balances for as long as the objection
+stands, because I2 (Σ balances == 0) must not depend on anyone agreeing with
+anyone. A dispute two people are arguing about is a flag they can both see, and
+the ledger stays arithmetically closed underneath it. `LedgerEntry` therefore
+does not carry the field at all — it lives on the wire/display shape only.
+
+Only the recipient may raise or withdraw it, enforced in the API rather than the
+UI: the sender must not be able to clear an accusation made against them. It is
+versioned and history-recorded like `setDeleted`, so `If-Match` protects it and
+the audit trail says who objected and when. In the outbox it is a standalone op
+that never folds into a pending edit of the same entry — the two are different
+axes, and coalescing them would lose one.
+
 ### 6.4 Concurrency
 
 Optimistic: every entry carries `version`; `PATCH`/`DELETE` require

@@ -3,7 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { zValidator } from '@hono/zod-validator';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import {
-  addParticipant, changesQuery, createTrip, patchTrip, settleShare, settlementQuery, transition as transitionBody, wireEntry,
+  addParticipant, changesQuery, createTrip, disputeBody, patchTrip, settleShare, settlementQuery, transition as transitionBody, wireEntry,
 } from '@vst/contracts';
 import {
   type Balances, type ParticipantId, type PlanOptions, balances, currency, entryFromWire, grossMatrix, moneyToString, preciseToString,
@@ -151,6 +151,42 @@ export function tripRoutes(deps: AppDeps) {
     const rec = await entryRepo.setDeleted(db, c.get('tripId'), c.req.param('eid'), ifMatch(c.req.header('if-match')), false, c.get('userId'));
     return jsonBig(c, rec);
   });
+  /**
+   * FR-5.3: only the person who received the payment may dispute it, or take the
+   * dispute back. The sender cannot clear an objection raised against them, and
+   * nobody else in the trip is party to it.
+   *
+   * Returns the recipient's participant id.
+   */
+  const recipientOnly = async (tripId: string, entryId: string, userId: string): Promise<{ me: string; version: number }> => {
+    const rec = await entryRepo.get(db, tripId, entryId);
+    if (rec.type !== 'transfer') throw new HTTPException(422, { message: 'only a payment can be disputed' });
+    const people = await participantRepo.list(db, tripId);
+    const me = people.find((p) => p.userId === userId);
+    const recipient = rec.shares[0]?.participantId;
+    if (!me || me.id !== recipient) throw new HTTPException(403, { message: 'only the recipient can dispute this payment' });
+    return { me: me.id, version: rec.version };
+  };
+
+  app.post('/trips/:tripId/entries/:eid/dispute', zValidator('json', disputeBody), async (c) => {
+    const tripId = c.get('tripId');
+    const eid = c.req.param('eid');
+    const { me } = await recipientOnly(tripId, eid, c.get('userId'));
+    const { reason } = c.req.valid('json');
+    const rec = await entryRepo.setDisputed(db, tripId, eid, ifMatch(c.req.header('if-match')), {
+      by: me, at: new Date(clock.nowMs()), ...(reason !== undefined ? { reason } : {}),
+    }, c.get('userId'));
+    return jsonBig(c, rec);
+  });
+
+  app.delete('/trips/:tripId/entries/:eid/dispute', async (c) => {
+    const tripId = c.get('tripId');
+    const eid = c.req.param('eid');
+    await recipientOnly(tripId, eid, c.get('userId'));
+    const rec = await entryRepo.setDisputed(db, tripId, eid, ifMatch(c.req.header('if-match')), null, c.get('userId'));
+    return jsonBig(c, rec);
+  });
+
   /** FR-10.2: every recorded state of one entry, with who changed it and when. */
   app.get('/trips/:tripId/entries/:eid/history', async (c) =>
     jsonBig(c, await entryRepo.history(db, c.get('tripId'), c.req.param('eid'))));

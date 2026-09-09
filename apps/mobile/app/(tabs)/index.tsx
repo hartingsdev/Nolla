@@ -143,6 +143,7 @@ export default function Overview() {
             <Row style={{ justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
                 <Body numberOfLines={1}>{categoryIcon(e.category, e.type)} {e.description}</Body>
+                {e.dispute && <Body style={{ fontSize: 12, color: th.negative }}>{t('dispute.flag')}</Body>}
                 <Body muted style={{ fontSize: 13 }}>
                   {formatDate(e.date, locale)} · {e.type !== 'expense'
                     ? t('ledger.transferTo', { from: names.get(e.payments[0]?.participantId ?? '') ?? '?', to: names.get(e.shares[0]?.participantId ?? '') ?? '?' })

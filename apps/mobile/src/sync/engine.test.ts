@@ -42,6 +42,12 @@ class FakeApi implements SyncApi {
     return this.bump({ ...cur, deleted }, cur.version + 1);
   }
   async settleShare() { this.guard('settle'); return null; }
+  async setDispute(_t: string, id: string, ifMatch: number, dispute: { reason?: string } | null) {
+    this.guard('dispute'); const cur = this.rows.get(id)!;
+    if (cur.version !== ifMatch) throw new ApiError(409, 'CONFLICT', 'stale', cur);
+    const { dispute: _d, ...rest } = cur;
+    return this.bump(dispute ? { ...rest, dispute: { at: 'now', by: 'p2', ...dispute } } : rest, cur.version + 1);
+  }
   async addParticipant(_t: string, p: { id: string; displayName: string }) { this.guard('participant'); return { id: p.id, displayName: p.displayName, userId: null, joinedAt: '2026-09-01', tombstonedAt: null, seq: '1' }; }
   /** Someone else edits on the server. */
   serverEdit(id: string, description: string) { const cur = this.rows.get(id)!; this.bump({ ...cur, description }, cur.version + 1); }
@@ -156,6 +162,29 @@ describe('syncTrip', () => {
     await syncTrip('trip', api, store);
     expect(store.state.conflicts[a.id]?.description).toBe('mine');
     expect(store.state.entries[0]?.description).toBe('theirs');
+  });
+
+  it('a dispute rides alongside the entry instead of folding into a pending edit (FR-5.3)', async () => {
+    const a = wire(uuid(1), 100n);
+    // An edit and a dispute touch the same entry but are not the same change.
+    let ob = enqueue([], { opId: '1', kind: 'update', entry: a });
+    ob = enqueue(ob, { opId: '2', kind: 'dispute', entryId: a.id, disputed: true, reason: 'nie bekommen' });
+    expect(ob.map((o) => o.kind)).toEqual(['update', 'dispute']);
+    // …and a later edit still folds into the pending edit, not into the dispute.
+    ob = enqueue(ob, { opId: '3', kind: 'update', entry: { ...a, description: 'zwei' } });
+    expect(ob.map((o) => o.kind)).toEqual(['dispute', 'update']);
+  });
+
+  it('pushes a dispute and takes the server version back', async () => {
+    const api = new FakeApi();
+    const a = wire(uuid(1), 100n);
+    const store = new MemStore({ ...emptyTrip(meta), entries: [a], outbox: [{ opId: '1', kind: 'create', entry: a }] });
+    await syncTrip('trip', api, store);
+    store.set('trip', (s) => ({ ...s, outbox: [{ opId: '2', kind: 'dispute', entryId: a.id, disputed: true, reason: 'nie bekommen' }] }));
+    const r = await syncTrip('trip', api, store);
+    expect(r).toMatchObject({ ok: true, pushed: 1 });
+    expect(store.state.versions[a.id]).toBe(2);
+    expect(store.state.entries[0]?.dispute?.reason).toBe('nie bekommen');
   });
 
   it('a 5xx keeps the write queued: the server is broken, the change is not', async () => {

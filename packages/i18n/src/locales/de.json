@@ -318,5 +318,17 @@
       "reason": "Grund",
       "deleted": "Gelöscht"
     }
+  },
+  "dispute": {
+    "title": "Anfechtung",
+    "raise": "Zahlung anfechten",
+    "hint": "Nur du als Empfänger kannst eine Zahlung anfechten, die du nicht kennst.",
+    "reason": "Grund",
+    "reasonPlaceholder": "z. B. nie angekommen",
+    "confirm": "Anfechten",
+    "withdraw": "Anfechtung zurückziehen",
+    "raisedBy": "Angefochten von {{name}} am {{date}}",
+    "stillCounts": "Die Zahlung zählt weiter in den Salden, bis sie geklärt oder gelöscht ist.",
+    "flag": "⚠︎ angefochten"
   }
 }

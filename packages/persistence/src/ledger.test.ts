@@ -131,6 +131,56 @@ describe('entries', () => {
     expect((await entryRepo.get(conn.db, f.tripId, w.id)).split).toBeUndefined();
   });
 
+  it('a disputed transfer is flagged but still counts toward the balances (FR-5.3)', async () => {
+    const a = f.pids[0]! as ParticipantId;
+    const b = f.pids[1]! as ParticipantId;
+    const amount = money(2000n, EUR);
+    const t: WireEntry = entryToWire({
+      id: randomUUID(), type: 'transfer', description: 'Zahlung', amount, date: localDate('2026-03-05'),
+      payments: [{ participantId: a, amount }],
+      shares: [{ participantId: b, amount: toPrecise(amount) }],
+      createdAt: '2026-03-05T10:00:00.000Z',
+    });
+    await entryRepo.create(conn.db, f.tripId, t, f.userId);
+    const before = balances((await entryRepo.list(conn.db, f.tripId)).map(entryFromWire), EUR);
+
+    const d = await entryRepo.setDisputed(conn.db, f.tripId, t.id, 1, { by: b, at: new Date('2026-03-06T08:00:00Z'), reason: 'nie bekommen' }, f.userId);
+    expect(d.dispute).toEqual({ at: '2026-03-06T08:00:00.000Z', by: b, reason: 'nie bekommen' });
+    expect(d.version).toBe(2);
+
+    // The money is untouched: the objection is a flag, not a reversal.
+    const after = balances((await entryRepo.list(conn.db, f.tripId)).map(entryFromWire), EUR);
+    for (const id of [a, b]) expect(after.get(id)?.scaled).toBe(before.get(id)?.scaled);
+
+    // It shows up in the audit trail like any other change to the row (FR-10.2).
+    const h = await entryRepo.history(conn.db, f.tripId, t.id);
+    expect(h.revisions).toHaveLength(1);
+    expect(entryDiff(h.revisions[0]!.snapshot, h.current).fields).toEqual([]);   // no money field moved
+    expect(h.revisions[0]?.snapshot.dispute).toBeUndefined();
+
+    const cleared = await entryRepo.setDisputed(conn.db, f.tripId, t.id, 2, null, f.userId);
+    expect(cleared.dispute).toBeUndefined();
+    expect(cleared.version).toBe(3);
+  });
+
+  it('only a transfer can be disputed, and a stale version is a conflict', async () => {
+    const w = expense(randomUUID(), 3000n, f.pids[0]!, f.pids);
+    await entryRepo.create(conn.db, f.tripId, w, f.userId);
+    await expect(entryRepo.setDisputed(conn.db, f.tripId, w.id, 1, { by: f.pids[1]!, at: new Date() }, f.userId))
+      .rejects.toBeInstanceOf(ForbiddenWriteError);
+
+    const amount = money(500n, EUR);
+    const t: WireEntry = entryToWire({
+      id: randomUUID(), type: 'transfer', description: 'Zahlung', amount, date: localDate('2026-03-05'),
+      payments: [{ participantId: f.pids[0]! as ParticipantId, amount }],
+      shares: [{ participantId: f.pids[1]! as ParticipantId, amount: toPrecise(amount) }],
+      createdAt: '2026-03-05T10:00:00.000Z',
+    });
+    await entryRepo.create(conn.db, f.tripId, t, f.userId);
+    await expect(entryRepo.setDisputed(conn.db, f.tripId, t.id, 99, { by: f.pids[1]!, at: new Date() }, f.userId))
+      .rejects.toBeInstanceOf(ConflictError);
+  });
+
   it('an entry id from another trip has no history here', async () => {
     const other = await fixture(2);
     const w = expense(randomUUID(), 1000n, f.pids[0]!, f.pids);

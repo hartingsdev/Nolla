@@ -35,6 +35,11 @@ export const wireSplit = z.object({
   surcharges: z.array(z.object({ participantId: uuid, amount: moneyString })).max(100).optional(),
 });
 
+/** A recipient's objection to a payment (FR-5.3); the money is untouched by it. */
+export const wireDispute = z.object({ at: isoInstant, by: uuid, reason: z.string().max(500).optional() });
+/** Body of POST /trips/:id/entries/:eid/dispute — the reason is optional but the point. */
+export const disputeBody = z.object({ reason: z.string().max(500).optional() });
+
 export const wireEntry = z.object({
   id: uuid,
   type: entryType,
@@ -47,6 +52,7 @@ export const wireEntry = z.object({
   reason: z.string().max(500).optional(),
   category: z.string().max(40).optional(),
   split: wireSplit.optional(),
+  dispute: wireDispute.optional(),
   createdAt: isoInstant,
   deleted: z.boolean().optional(),
 });

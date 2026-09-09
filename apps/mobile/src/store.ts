@@ -41,6 +41,8 @@ interface Actions {
   readonly deleteEntry: (id: string) => void;
   readonly restoreEntry: (id: string) => void;
   readonly markShareSettled: (entryId: string, participantId: string, transferIds: readonly string[]) => void;
+  /** FR-5.3: the recipient flags a payment they do not recognise, or takes it back. */
+  readonly setDispute: (entryId: string, dispute: { reason?: string } | null) => void;
   readonly addParticipant: (p: Participant, joinedAt: string) => void;
   readonly removeParticipant: (id: string) => void;
   readonly setMe: (id: string | null) => void;
@@ -95,6 +97,21 @@ export const useStore = create<State & Actions>()(
           change(
             (t) => ({ ...t, entries: t.entries.map((x) => (x.id === entryId ? { ...x, shares: x.shares.map((sh) => (sh.participantId === participantId ? { ...sh, settledBy: transferIds.join(',') } : sh)) } : x)) }),
             () => ({ opId: opId(), kind: 'settleShare', entryId, participantId, transferEntryId: transferIds[0] ?? null }),
+          );
+        },
+        setDispute: (entryId, dispute) => {
+          const by = active()?.meId ?? '';
+          const at = new Date().toISOString();
+          change(
+            (t) => ({
+              ...t,
+              entries: t.entries.map((e) => {
+                if (e.id !== entryId) return e;
+                if (!dispute) { const { dispute: _gone, ...rest } = e; return rest; }
+                return { ...e, dispute: { at, by, ...(dispute.reason !== undefined ? { reason: dispute.reason } : {}) } };
+              }),
+            }),
+            () => ({ opId: opId(), kind: 'dispute', entryId, disputed: dispute !== null, ...(dispute?.reason !== undefined ? { reason: dispute.reason } : {}) }),
           );
         },
         addParticipant: (p, joinedAt) => { change((t) => ({ ...t, participants: [...t.participants, p] }), () => ({ opId: opId(), kind: 'addParticipant', participant: { id: p.id, displayName: p.name, joinedAt } })); },

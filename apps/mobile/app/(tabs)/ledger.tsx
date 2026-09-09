@@ -77,6 +77,7 @@ export default function Ledger() {
               </Row>
               {e.type === 'expense' && <Body muted style={{ fontSize: 12, color: th.muted }}>{e.shares.map((s) => names.get(s.participantId) ?? '?').join(' · ')}</Body>}
               {e.reason && <Body muted style={{ fontSize: 12 }} numberOfLines={1}>{t('entry.reason')}: {e.reason}</Body>}
+              {e.dispute && <Body style={{ fontSize: 12, color: th.negative }}>{t('dispute.flag')}</Body>}
             </Card>
           </Pressable>
         )}

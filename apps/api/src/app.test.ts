@@ -153,6 +153,62 @@ describe('trips, invites, participants', () => {
 });
 
 describe('ledger', () => {
+  it('only the recipient can dispute a payment, and the money does not move (FR-5.3)', async () => {
+    const a = await signIn('d1', 'robert@d.de');
+    const { tripId, me: robert } = await newTrip(a.token, 'Streitfall');
+
+    // Max joins for real, so both sides are claimed users.
+    const maxPlaceholder = await addPlaceholder(a.token, tripId, 'Max');
+    const inv = await call(`/trips/${tripId}/invites`, { method: 'POST', token: a.token });
+    const b = await signIn('d2', 'max@d.de');
+    await call(`/invites/${inv.body.url.split('/i/')[1]}/accept`, { method: 'POST', token: b.token });
+    await call(`/trips/${tripId}/participants/${maxPlaceholder}/claim`, { method: 'POST', token: b.token });
+
+    // Robert says he paid Max €20.
+    const t = {
+      id: crypto.randomUUID(), type: 'transfer', description: 'Zahlung', amount: '20.00', ccy: 'EUR', date: '2026-09-01',
+      payments: [{ participantId: robert, amount: '20.00' }],
+      shares: [{ participantId: maxPlaceholder, amount: '20.00000000' }],
+      createdAt: '2026-09-01T10:00:00.000Z',
+    };
+    expect((await call(`/trips/${tripId}/entries`, { ...json(t), token: a.token })).status).toBe(201);
+    const before = (await call(`/trips/${tripId}/balances`, { token: a.token })).body.shown;
+
+    // The sender cannot dispute his own payment.
+    const bySender = await call(`/trips/${tripId}/entries/${t.id}/dispute`, { ...json({ reason: 'doch' }, { 'if-match': '1' }), token: a.token });
+    expect(bySender.status).toBe(403);
+
+    // The recipient can.
+    const raised = await call(`/trips/${tripId}/entries/${t.id}/dispute`, { ...json({ reason: 'nie bekommen' }, { 'if-match': '1' }), token: b.token });
+    expect(raised.status).toBe(200);
+    expect(raised.body.dispute).toMatchObject({ by: maxPlaceholder, reason: 'nie bekommen' });
+    expect(raised.body.version).toBe(2);
+
+    // Balances are exactly as before: the flag is not a reversal.
+    const after = (await call(`/trips/${tripId}/balances`, { token: a.token })).body.shown;
+    expect(after).toEqual(before);
+
+    // Both sides see it through the feed.
+    const feed = await call(`/trips/${tripId}/entries?since=0`, { token: a.token });
+    expect(feed.body.entries.find((e: { id: string }) => e.id === t.id).dispute.reason).toBe('nie bekommen');
+
+    // The sender cannot clear an objection raised against him; the recipient can.
+    expect((await call(`/trips/${tripId}/entries/${t.id}/dispute`, { method: 'DELETE', headers: { 'if-match': '2' }, token: a.token })).status).toBe(403);
+    const cleared = await call(`/trips/${tripId}/entries/${t.id}/dispute`, { method: 'DELETE', headers: { 'if-match': '2' }, token: b.token });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.dispute).toBeUndefined();
+  });
+
+  it('an expense cannot be disputed — only a payment moves money between two people', async () => {
+    const { token } = await signIn('d3', 'robert3@d.de');
+    const { tripId, me } = await newTrip(token, 'Kein Streit');
+    const max = await addPlaceholder(token, tripId, 'Max');
+    const w = expenseWire(1000n, me, [me, max]);
+    await call(`/trips/${tripId}/entries`, { ...json(w), token });
+    const r = await call(`/trips/${tripId}/entries/${w.id}/dispute`, { ...json({}, { 'if-match': '1' }), token });
+    expect(r.status).toBe(422);
+  });
+
   it('serves the audit trail for one entry, with actors resolved (FR-10.2)', async () => {
     const a = await signIn('h1', 'robert@h.de');
     const { tripId, me } = await newTrip(a.token, 'Historie');

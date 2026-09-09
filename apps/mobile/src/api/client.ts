@@ -56,6 +56,11 @@ export class ApiClient {
   createEntry(tripId: string, entry: WireEntry) { return this.request<EntryRecord>('POST', `/trips/${tripId}/entries`, { body: entry }); }
   updateEntry(tripId: string, entry: WireEntry, ifMatch: number) { return this.request<EntryRecord>('PATCH', `/trips/${tripId}/entries/${entry.id}`, { body: entry, ifMatch }); }
   setDeleted(tripId: string, id: string, ifMatch: number, deleted: boolean) { return this.request<EntryRecord>(deleted ? 'DELETE' : 'POST', `/trips/${tripId}/entries/${id}${deleted ? '' : '/restore'}`, { ifMatch }); }
+  setDispute(tripId: string, entryId: string, ifMatch: number, dispute: { reason?: string } | null) {
+    return dispute
+      ? this.request<EntryRecord>('POST', `/trips/${tripId}/entries/${entryId}/dispute`, { body: dispute, ifMatch })
+      : this.request<EntryRecord>('DELETE', `/trips/${tripId}/entries/${entryId}/dispute`, { ifMatch });
+  }
   entryHistory(tripId: string, entryId: string) { return this.request<EntryHistory>('GET', `/trips/${tripId}/entries/${entryId}/history`); }
   settleShare(tripId: string, entryId: string, participantId: string, transferEntryId: string | null) { return this.request<null>('POST', `/trips/${tripId}/entries/${entryId}/settle-share`, { body: { participantId, transferEntryId } }); }
   // receipts

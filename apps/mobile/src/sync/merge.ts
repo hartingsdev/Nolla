@@ -14,6 +14,7 @@ export type OutboxOp =
   | { readonly opId: string; readonly kind: 'update'; readonly entry: WireEntry }
   | { readonly opId: string; readonly kind: 'delete' | 'restore'; readonly entryId: string }
   | { readonly opId: string; readonly kind: 'settleShare'; readonly entryId: string; readonly participantId: string; readonly transferEntryId: string | null }
+  | { readonly opId: string; readonly kind: 'dispute'; readonly entryId: string; readonly disputed: boolean; readonly reason?: string }
   | { readonly opId: string; readonly kind: 'addParticipant'; readonly participant: { id: string; displayName: string; joinedAt: string } };
 
 export interface TripState {
@@ -45,10 +46,13 @@ const entryOf = (op: OutboxOp): string | null => op.kind === 'create' || op.kind
  * one write per entry: edit-after-create stays a create, delete-after-create
  * cancels both, edit-after-edit keeps the last edit.
  */
+/** Ops that ride alongside an entry rather than replacing it; folding them would lose them. */
+const standalone = (op: OutboxOp): boolean => op.kind === 'settleShare' || op.kind === 'dispute';
+
 export function enqueue(outbox: readonly OutboxOp[], op: OutboxOp): OutboxOp[] {
   const id = entryOf(op);
-  if (id === null || op.kind === 'settleShare') return [...outbox, op];
-  const idx = outbox.findIndex((o) => entryOf(o) === id && o.kind !== 'settleShare');
+  if (id === null || standalone(op)) return [...outbox, op];
+  const idx = outbox.findIndex((o) => entryOf(o) === id && !standalone(o));
   if (idx < 0) return [...outbox, op];
   const prev = outbox[idx] as OutboxOp;
   const rest = outbox.filter((_, i) => i !== idx);

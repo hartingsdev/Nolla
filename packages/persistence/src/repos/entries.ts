@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray } from 'drizzle-orm';
 import { type WireEntry, type WireSplit, currency, entryFromWire, validateEntry } from '@vst/domain';
 import { type Db } from '../db';
-import { ConflictError, NotFoundError } from '../errors';
+import { ConflictError, ForbiddenWriteError, NotFoundError } from '../errors';
 import { entries, entryHistory, payments, shares, users } from '../schema';
 import { nextSeq, tripRepo } from './trips';
 
@@ -67,6 +67,9 @@ export function toRecord(e: EntryRow, ps: readonly PaymentRow[], ss: readonly Sh
     ...(e.reason !== null ? { reason: e.reason } : {}),
     ...(e.category !== null ? { category: e.category } : {}),
     ...(e.splitRule !== null ? { split: e.splitRule as WireSplit } : {}),
+    ...(e.disputedAt !== null && e.disputedBy !== null
+      ? { dispute: { at: e.disputedAt.toISOString(), by: e.disputedBy, ...(e.disputeReason !== null ? { reason: e.disputeReason } : {}) } }
+      : {}),
     createdAt: e.createdAt.toISOString(),
     ...(e.deletedAt ? { deleted: true } : {}),
     version: e.version, seq: e.seq, updatedAt: e.updatedAt.toISOString(),
@@ -211,6 +214,37 @@ export const entryRepo = {
       })),
       current: await entryRepo.get(db, tripId, entryId),
     };
+  },
+
+  /**
+   * Raise or withdraw a dispute on a transfer (FR-5.3).
+   *
+   * Versioned and recorded in the history like any other change to the row —
+   * it is something a person did to the entry, and the audit trail should say
+   * who. What it deliberately does NOT do is touch the money: the transfer goes
+   * on counting toward the balances while the dispute stands.
+   *
+   * `by` is the participant raising it; passing null withdraws.
+   */
+  async setDisputed(
+    db: Db, tripId: string, entryId: string, expectedVersion: number,
+    dispute: { by: string; at: Date; reason?: string } | null, actor: string | null,
+  ): Promise<EntryRecord> {
+    return db.transaction(async (tx) => {
+      const current = await entryRepo.get(tx, tripId, entryId);
+      if (current.version !== expectedVersion) throw new ConflictError(current);
+      if (current.type !== 'transfer') throw new ForbiddenWriteError(`entry ${entryId} is not a transfer`);
+      await tripRepo.assertWritable(tx, tripId, 'transfer');
+      const seq = await nextSeq(tx, tripId);
+      await tx.insert(entryHistory).values({ entryId, tripId, version: current.version, actor, snapshot: snapshot(current) });
+      await tx.update(entries).set({
+        disputedAt: dispute?.at ?? null,
+        disputedBy: dispute?.by ?? null,
+        disputeReason: dispute?.reason ?? null,
+        version: current.version + 1, seq, updatedAt: new Date(),
+      }).where(eq(entries.id, entryId));
+      return entryRepo.get(tx, tripId, entryId);
+    });
   },
 
   /** FR-7.4: link a share to the transfer that settled it. */

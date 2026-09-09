@@ -35,6 +35,14 @@ export interface WireSurcharge { readonly participantId: string; readonly amount
 /** The rule plus anything added per person on top of it — everything `allocate` needs. */
 export interface WireSplit { readonly rule: WireSplitRule; readonly surcharges?: readonly WireSurcharge[] }
 
+/**
+ * A recipient's objection to a payment (FR-5.3). Deliberately NOT part of
+ * `LedgerEntry`: the transfer keeps counting toward the balances while the
+ * dispute stands, because I2 (Σ balances == 0) must never depend on anyone
+ * agreeing. It is a flag two people can see, not a change to the money.
+ */
+export interface WireDispute { readonly at: string; readonly by: string; readonly reason?: string }
+
 export interface WirePayment { readonly participantId: string; readonly amount: string }
 export interface WireShare { readonly participantId: string; readonly amount: string; /** id of the transfer that settled this share (FR-7.4, P7) */ readonly settledBy?: string }
 export interface WireEntry {
@@ -50,6 +58,8 @@ export interface WireEntry {
   readonly category?: string;
   /** Present when the client recorded how it split; absent on older entries. */
   readonly split?: WireSplit;
+  /** Set while the recipient disputes this transfer (FR-5.3). */
+  readonly dispute?: WireDispute;
   readonly createdAt: string;
   readonly deleted?: boolean;
 }
@@ -60,6 +70,7 @@ export interface Entry extends LedgerEntry {
   readonly createdAt: string;
   readonly category?: string;
   readonly split?: { readonly rule: SplitRule; readonly surcharges?: readonly Surcharge[] };
+  readonly dispute?: { readonly at: string; readonly by: ParticipantId; readonly reason?: string };
   /** participantId → id of the transfer that settled that share */
   readonly settled?: Readonly<Record<string, string>>;
 }
@@ -101,6 +112,7 @@ export function entryToWire(e: Entry): WireEntry {
       rule: splitRuleToWire(e.split.rule),
       ...(e.split.surcharges?.length ? { surcharges: e.split.surcharges.map((x) => ({ participantId: x.participantId, amount: moneyToString(x.amount) })) } : {}),
     } } : {}),
+    ...(e.dispute ? { dispute: { at: e.dispute.at, by: e.dispute.by, ...(e.dispute.reason !== undefined ? { reason: e.dispute.reason } : {}) } } : {}),
     createdAt: e.createdAt,
     ...(e.deleted ? { deleted: true } : {}),
   };
@@ -122,6 +134,7 @@ export function entryFromWire(w: WireEntry): Entry {
       ...(w.split.surcharges?.length ? { surcharges: w.split.surcharges.map((x) => ({ participantId: x.participantId as ParticipantId, amount: moneyFromString(x.amount, ccy) })) } : {}),
     } } : {}),
     ...(settledPairs.length ? { settled: Object.fromEntries(settledPairs) } : {}),
+    ...(w.dispute ? { dispute: { at: w.dispute.at, by: w.dispute.by as ParticipantId, ...(w.dispute.reason !== undefined ? { reason: w.dispute.reason } : {}) } } : {}),
     createdAt: w.createdAt,
     ...(w.deleted ? { deleted: true } : {}),
   };

@@ -318,5 +318,17 @@
       "reason": "Reason",
       "deleted": "Deleted"
     }
+  },
+  "dispute": {
+    "title": "Dispute",
+    "raise": "Dispute this payment",
+    "hint": "Only you, as the recipient, can flag a payment you do not recognise.",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g. never arrived",
+    "confirm": "Dispute",
+    "withdraw": "Withdraw dispute",
+    "raisedBy": "Disputed by {{name}} on {{date}}",
+    "stillCounts": "The payment still counts toward the balances until it is resolved or deleted.",
+    "flag": "⚠︎ disputed"
   }
 }
