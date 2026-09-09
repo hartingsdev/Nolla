@@ -86,7 +86,14 @@ jobs:
         env:
           CI: 1
           EXPO_PUBLIC_API_URL: http://localhost:8090   # the e2e suite boots the API on PGlite on this port
-      - run: pnpm --filter @vst/mobile exec playwright install --with-deps chromium
+      # No --with-deps: that runs apt-get update, which drags every third-party
+      # repository on the runner image into this job. One of them (Google's Chrome
+      # repo, which Playwright's own chromium does not need) served a Packages file
+      # that did not match its Release hashes, apt exited 100, and the UI tests were
+      # skipped without a single one running. The libraries it would install are
+      # already on ubuntu-latest. If a future image drops one, chromium fails to
+      # launch and every test says so loudly — put --with-deps back then.
+      - run: pnpm --filter @vst/mobile exec playwright install chromium
       - run: pnpm --filter @vst/mobile e2e:only
         env:
           CI: 1
