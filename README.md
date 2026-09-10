@@ -73,7 +73,7 @@ test asserts that on every build against what is actually on screen.
 
 **On an Android phone** — this is a real installed app, not a web page:
 
-<https://github.com/hartingsdev/claude-test/releases/download/android-latest/nolla.apk>
+<https://github.com/hartingsdev/Nolla/releases/download/android-latest/nolla.apk>
 
 Open that on the phone and tap it. Android asks once whether the browser may
 install apps; say yes. Settings → *Load sample trip* fills it with a worked
