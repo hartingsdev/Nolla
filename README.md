@@ -39,8 +39,15 @@ the phone to reach the dev API rather than `localhost`.
 
 **As a real installed app on Android** — no Expo account, no Play Console, no
 Android SDK anywhere. Actions → *android-apk* → *Run workflow* (`expo prebuild`
-then `gradlew assembleRelease` on a GitHub runner, ~25 minutes), then download
-the `trip-ledger-apk` artifact **on the phone**, unzip, open the `.apk`.
+then `gradlew assembleRelease` on a GitHub runner, ~25 minutes). It attaches the
+build to a rolling prerelease, so the phone opens one unchanging link:
+
+<https://github.com/hartingsdev/claude-test/releases/download/android-latest/trip-ledger.apk>
+
+Tapping it installs; Android asks once whether the browser may install apps. The
+run also uploads the usual workflow artifact, but a phone cannot use it — GitHub
+requires a signed-in session to download artifacts even from a public repository,
+and wraps them in a zip that the package installer will not open.
 
 It is signed with the shared debug keystore Expo's template ships: fine for your
 own phone, unfit for anything else, and a Play Console keystore later (M10) will

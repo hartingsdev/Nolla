@@ -1,7 +1,7 @@
 name: android-apk
 # An installable APK without an Expo account, a Play Console or an Android SDK
-# on anyone's laptop: run this workflow, download the artifact on the phone,
-# open it. See README → "On an Android phone".
+# on anyone's laptop: run this workflow, then tap the release link on the phone.
+# See README → "As a real installed app on Android".
 on:
   workflow_dispatch:
     inputs:
@@ -15,6 +15,8 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write     # publishing the release below
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -48,9 +50,42 @@ jobs:
         env:
           EXPO_PUBLIC_API_URL: ${{ inputs.api_url }}
 
+      # Kept for CI history and desktop use. A phone cannot practically use it:
+      # artifact downloads require a signed-in GitHub session even on a public
+      # repository, and arrive zipped even for a single file — Android's package
+      # installer wants a plain .apk, not one inside an archive. Hence the
+      # release below, which is the link the phone actually follows.
       - uses: actions/upload-artifact@v7
         with:
           name: trip-ledger-apk
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk
           retention-days: 30
           if-no-files-found: error
+
+      # One rolling prerelease rather than a tag per build, so the download URL
+      # stays the same and can be bookmarked or sent to someone. Recreated each
+      # run: `gh release upload --clobber` would keep stale notes pointing at an
+      # older commit.
+      - name: Publish the APK as a release asset
+        working-directory: apps/mobile/android/app/build/outputs/apk/release
+        run: |
+          mv app-release.apk trip-ledger.apk
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" trip-ledger.apk \
+            --title 'Trip Ledger — Android sideload build' \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --notes "$NOTES"
+        env:
+          TAG: android-latest
+          GH_TOKEN: ${{ github.token }}
+          NOTES: |
+            Built from `${{ github.sha }}`${{ inputs.api_url && format(', pointed at {0}', inputs.api_url) || '' }}.
+
+            **[Download trip-ledger.apk](https://github.com/${{ github.repository }}/releases/download/android-latest/trip-ledger.apk)** — open this on the phone and tap it. Android asks once whether the browser may install apps.
+
+            Signed with the shared debug keystore Expo's template ships: fine for your own device, not something to publish. A Play Console keystore later will force an uninstall before it can replace this build.
+
+            A trip kept on the device works offline. A shared trip needs an API the phone can reach — enter its address on the sign-in screen.
+
+            Replaced on every run of the `android-apk` workflow; the download link above never changes.
