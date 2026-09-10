@@ -6,7 +6,7 @@ test('empty state invites the first expense', async ({ page }) => {
   await expect(page.getByText('No expenses yet. Tap + to add the first one.')).toBeVisible();
 });
 
-test('sample trip: headline, balances and trip cost from the spreadsheet rows', async ({ page }) => {
+test('sample trip: headline, balances and trip cost', async ({ page }) => {
   await loadSample(page);
   await expect(page.getByText('You owe €128.92')).toBeVisible(); // exact −128.916, see §5.1
   await expect(page.getByText('€945.48')).toBeVisible();

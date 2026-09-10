@@ -1,12 +1,12 @@
 /**
- * Spreadsheet-shaped CSV export (FR-7.8) — the exit path back to a sheet, and
+ * Spreadsheet-shaped CSV export (FR-7.8) — the exit path out of the app, and
  * the safety valve if the group ever abandons the app mid-trip (§13).
  *
  * Pure like the rest of the domain: no clock, no file system, no i18n. The
  * caller supplies the timestamp, the translated labels and the CSV dialect;
  * this module only turns a trip into text.
  *
- * The layout mirrors the sheet it replaces: one row per entry, one column per
+ * The layout is the one a spreadsheet wants: one row per entry, one column per
  * participant holding that person's share, then the `Gesamt` / `Bereits
  * gezahlt` / `Offen` block (FR-7.1, FR-7.3) and the settlement plan.
  */
@@ -148,7 +148,7 @@ export function tripCsv(input: TripExport): string {
   rows.push([labels.exported, input.generatedAt]);
   rows.push([]);
 
-  // Entries: one row per entry, one column per participant (the sheet's shape).
+  // Entries: one row per entry, one column per participant.
   rows.push([labels.entries]);
   rows.push([labels.date, labels.type, labels.description, labels.reason, labels.category, labels.amount, labels.paidBy, ...people.map((p) => safeText(p.name)), labels.settled]);
   for (const e of entries) {

@@ -1,7 +1,7 @@
 import { type ParticipantId, type WireEntry, allocate, currency, entryToWire, localDate, money, moneyFromString } from '@vst/domain';
 import { type Participant } from './store';
 
-/** The first rows of the group's real spreadsheet, so screens have something to show. */
+/** A worked example trip, so the screens have something to show. */
 export function sampleTrip(): { trip: { name: string; ccy: string }; participants: Participant[]; entries: WireEntry[] } {
   const EUR = currency('EUR');
   const P = ['Yannik', 'Max', 'Robert', 'Tobias', 'Marc'].map((name, i) => ({ id: `p${String(i)}`, name }));

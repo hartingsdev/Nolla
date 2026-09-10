@@ -174,7 +174,7 @@ describe('settle — bilateral on random ledgers', () => {
       expect(pairs.size).toBe(plan.transfers.length);
     }), { numRuns: 200 });
   });
-  it('the sheet: Max owes Yannik 21.88, Yannik owes Max 11.75 → Max pays Yannik 10.13', () => {
+  it('a real pair: Max owes Yannik 21.88, Yannik owes Max 11.75 → Max pays Yannik 10.13', () => {
     const [Y, MX] = [pid('yannik'), pid('max')];
     const D = new Map([
       [MX, new Map([[Y, toPrecise(money(2188n, EUR))]])],

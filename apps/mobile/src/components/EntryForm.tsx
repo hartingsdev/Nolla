@@ -76,7 +76,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   });
   /** The rule this entry was saved with, when it recorded one (FR-3.5). */
   const savedRule = initial?.type === 'expense' ? initial.split?.rule : undefined;
-  /** Per-person tip carved out of the amount (FR-3.7, the sheet's `Trinkgeld p.P.`). */
+  /** Per-person tip carved out of the amount (FR-3.7). */
   const [tipRaw, setTipRaw] = useState(() => {
     const first = initial?.type === 'expense' ? initial.split?.surcharges?.[0] : undefined;
     return first ? plain(first.amount) : '';

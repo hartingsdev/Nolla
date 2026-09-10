@@ -1,4 +1,4 @@
-/** Expense categories (FR-2.4), derived from the spreadsheet's actual rows. Icons are emoji to keep the app dependency-free. */
+/** Expense categories (FR-2.4) — the kinds of cost a road trip actually produces. Icons are emoji to keep the app dependency-free. */
 export const CATEGORIES = ['rent', 'groceries', 'fuel', 'tolls', 'parking', 'restaurant', 'activity', 'transport', 'other'] as const;
 export type Category = (typeof CATEGORIES)[number];
 export const CATEGORY_ICON: Record<Category, string> = {

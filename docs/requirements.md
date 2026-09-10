@@ -1,9 +1,14 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.6** · Owner: project team · Date: 2026-09-10
+Status: **Draft v1.7** · Owner: project team · Date: 2026-09-10
 
 **Changelog**
 
+- v1.7 — editorial: the group's existing records are no longer cited as the
+  source of anything. §4 states the baseline behaviours in their own right and
+  §4.1 the failure modes of tracking costs by hand; the requirements and their
+  worked numbers are unchanged. The prior records were a starting point, never
+  a dependency, and the document no longer reads as though they were.
 - v1.6 — cost note added to §1.3: storage is not the cost driver, which removes
   the stated rationale for gating on it (D11, D13); Q15 restated as deliberately
   open until after the first real trip. Q11b split: the mail half is a credential needed before v0.1 ships
@@ -22,15 +27,14 @@ Status: **Draft v1.6** · Owner: project team · Date: 2026-09-10
   an axis-agnostic entitlement model; D13, D15, D16 explicitly deferred.
 - v1.1 — native app-store distribution instead of a PWA; accounts required up
   front; multi-tenant schema; hosting deferred behind portability constraints;
-  sheet import and fixture dropped; two-tier money precision (§5.1).
-- v1.0 — initial requirements derived from the spreadsheet.
+  import and fixture dropped; two-tier money precision (§5.1).
+- v1.0 — initial requirements.
 
 See §1.3 for the decision log.
 
 This document does the requirements engineering for a group travel expense
-tracker that replaces the spreadsheet the group currently maintains. It defines
-scope, the domain model, functional and non-functional requirements, the
-settlement algorithm, and a release plan.
+tracker. It defines scope, the domain model, functional and non-functional
+requirements, the settlement algorithm, and a release plan.
 
 ---
 
@@ -38,9 +42,9 @@ settlement algorithm, and a release plan.
 
 A group of friends (currently 5: Yannik, Max, Robert, Tobias, Marc) shares costs
 during vacations. Whoever has the card pays; the cost is split among whoever
-benefited; at the end everybody settles up. Today this is a Google Sheet with a
-`Preis` column, one column per person, an "an wen?" (to whom) column, a totals
-block, and a hand-built debt matrix.
+benefited; at the end everybody settles up. Today this is tracked by hand: a
+running list of costs, who paid each one, who it was for, and a debt matrix
+worked out at the end — with the arithmetic redone whenever anything changes.
 
 **Vision:** a shared app where any participant can add an expense in under 15
 seconds from their phone during the trip, sees at all times what they owe and to
@@ -51,7 +55,7 @@ manual arithmetic and no reconciliation drift.
 
 | # | Goal | Success measure |
 |---|------|-----------------|
-| G1 | Replace the spreadsheet entirely for the next trip | 100% of expenses entered in the app; no parallel sheet |
+| G1 | Carry the next trip end to end | 100% of expenses entered in the app; nothing tracked in parallel by hand |
 | G2 | Eliminate arithmetic and reconciliation errors | Sum of shares == expense total, always, by construction |
 | G3 | Fast capture in the field | Median time to log an equal-split expense ≤ 15 s, offline-capable |
 | G4 | Trustworthy settlement | Every member can trace any balance back to the expenses that produced it |
@@ -80,10 +84,10 @@ Resolved 2026-09-08. These supersede the open questions in the v1.0 draft.
 | D1 | **Native app, published to the App Store and Play Store** — React Native (Expo), one TypeScript codebase, with the web build shipped alongside | The owner wants store distribution and sees a possible product for others | Two developer accounts (Apple $99/yr, Google $25 once), release review cycles, store compliance work (NFR-15); the web build stays the zero-install path for someone joining mid-trip |
 | D2 | **Account required up front** — Sign in with Apple / Google / e-mail, before joining a trip | Clean identity, cross-device from day one, simplest support and audit story as a product | A signup wall during a trip; mitigated by placeholder participants (FR-1.3), which become load-bearing rather than a convenience. Apple: offering Google sign-in obliges Sign in with Apple (FR-1.10); having accounts obliges in-app deletion (FR-1.9) |
 | D3 | **Hosting deferred, portability enforced** | "Scalable, decide later" | Three binding constraints (NFR-14): `trip_id` on every row, no query spanning trips, domain logic free of framework and vendor imports. No managed-auth or managed-storage shortcuts in the core |
-| D4 | **Single currency in the MVP, multi-currency later** | The sheet is entirely EUR | `currency` and `fx_rate` columns exist from the first migration, unused in v0.1 — a feature flag later, not a migration (FR-2.8) |
+| D4 | **Single currency in the MVP, multi-currency later** | The group spends in EUR only | `currency` and `fx_rate` columns exist from the first migration, unused in v0.1 — a feature flag later, not a migration (FR-2.8) |
 | D5 | **Build for this group; don't foreclose the product** | Ship for the next trip, keep the door open | Multi-tenant schema, no hardcoded participants, pure domain module — roughly 10% over a single-group build. Product scaffolding deferred per §1.2 |
 | D6 | **In scope**: per-share paid status (FR-7.4), per-person tip (FR-3.7), preferred-creditor routing (FR-8.5) | All three reflect real group behaviour | As specified, v0.2 |
-| D7 | **Sheet import and the golden fixture both dropped** | Neither the importer nor a transcribed test fixture is wanted | No import UI, no spreadsheet-derived test data. Correctness rests on property-based tests over the invariants (NFR-11, NFR-13) |
+| D7 | **Import and the golden fixture both dropped** | Neither an importer for existing records nor a transcribed test fixture is wanted | No import UI, no transcribed test data. Correctness rests on property-based tests over the invariants (NFR-11, NFR-13) |
 | D8 | **Two-tier money precision** — high-precision derived values, integer minor units for anything payable | Rounding per expense lets one member absorb the odd cent repeatedly; keeping shares exact removes that drift entirely | Shares and balances are exact to 8 decimal places; rounding happens at exactly two boundaries, display and settlement (§5.1). Replaces the earlier "integer cents everywhere" rule |
 | D9 | **Both stores at launch** (Q9) | Expo builds both from one source; the group is mixed iOS/Android, so shipping one first excludes friends from the trip the app was built for | Two developer accounts, two review queues, two listings. Development effort roughly unchanged |
 | D10 | **English source strings, German shipped from v0.1** (Q14) | The group is German-speaking, but a product needs an English source; retrofitting i18n means extracting every hardcoded string | i18n plumbing and one translation pass in v0.1 (~1 day). Locale-aware formatting regardless (NFR-8) |
@@ -127,7 +131,7 @@ not ledger rows.
 |---|---|
 | **Participant** (all 5 friends) | Log spend fast, know their own balance, pay the right amount at the end |
 | **Trip organizer** (currently Robert — fronts rent, fuel, tolls) | Get reimbursed, keep the ledger correct, correct other people's mistakes |
-| **Treasurer / spreadsheet owner** (currently whoever owns the sheet) | Close the trip, produce the final settlement, record who has already paid |
+| **Treasurer** (currently whoever keeps the running tally) | Close the trip, produce the final settlement, record who has already paid |
 | **Operator** (us) | Cheap to host, low maintenance, no personal-finance regulatory burden |
 
 Personas:
@@ -136,7 +140,7 @@ Personas:
   outstanding receivables, mark incoming payments as received.
 - **"Casual" Max** — pays for a round of drinks now and then, sometimes skips an
   activity. Needs: one-tap "I wasn't part of this", clear "what do I owe".
-- **"Auditor" Yannik** — the one who checks the sheet. Needs: full history, an
+- **"Auditor" Yannik** — the one who checks the numbers. Needs: full history, an
   audit trail of edits, and reconciliation guarantees.
 
 ---
@@ -149,12 +153,12 @@ Personas:
 | **Participant** | A person *in a trip* — the thing shares and payments point at. Linked to a User once claimed; a **placeholder** until then; **tombstoned** (name kept, identity detached) if the user deletes their account. |
 | **Entry** | Any line in the ledger. One of: Expense, Reimbursement, Transfer, Adjustment. |
 | **Expense** | Money that left the group, paid by one (or more) participants, split among beneficiaries. |
-| **Payer** | Participant(s) who actually paid the merchant. The sheet's `an wen?` column. |
+| **Payer** | Participant(s) who actually paid the merchant. |
 | **Share** | The portion of an entry attributed to one beneficiary. |
 | **Split rule** | How the total is divided: equal, shares/weights, percentage, exact amounts, or per-item. |
 | **Reimbursement** | Money that came *into* the group and reduces cost (bottle deposit `Pfandsammlung`, cashback, refund). Modeled as a negative expense. |
-| **Transfer** | A payment from one participant directly to another (the sheet's `Zahlung` rows). Settles debt; is *not* a trip cost. |
-| **Adjustment** | A manual correction booked against a participant's balance, with mandatory reason (the sheet's `Umbuchung`). |
+| **Transfer** | A payment from one participant directly to another. Settles debt; is *not* a trip cost. |
+| **Adjustment** | A manual correction booked against a participant's balance, with mandatory reason. |
 | **Balance** | For a participant: Σ payments − Σ shares across every entry type (expenses, reimbursements, transfers, adjustments). Positive = is owed money (creditor). Held as `Precise`. |
 | **Residual** | The sub-cent difference that appears when a `Precise` value is rounded to `Money`. Always attributed to a named participant, never dropped (§5.1 P4). |
 | **Plan / entitlement** | The set of named limits an account is entitled to; resolved per trip through one service (FR-12). v0.1 has a single all-permitting plan. |
@@ -167,55 +171,55 @@ Personas:
 
 ---
 
-## 4. As-is analysis: what the spreadsheet already does
+## 4. Baseline: what tracking by hand already does
 
-Everything the sheet does is a requirement until proven otherwise. Derived from
-the two screenshots:
+Any group that shares costs on a trip already does all of this with a list and a
+calculator. Each line is a requirement until proven otherwise:
 
-| # | Observed behaviour in the sheet | Evidence | Requirement |
-|---|---|---|---|
-| A1 | Expense with a total price and one column per person | `Miete 1/2` €465.35 → 5 × €93.07 | FR-3.1 |
-| A2 | Equal split is the default | most rows | FR-3.2 |
-| A3 | Split across a **subset** of participants | `Rulantica` €168.00 → €42.00 × 4, Marc excluded | FR-3.3 |
-| A4 | **Unequal, per-person amounts** | `Casamore` €120 → 29.45 / 32.45 / 36.12 / 21.95; `Essen Saarbrücken` → 11.75 / 7.50 / 19.75 | FR-3.4 |
-| A5 | The payer is recorded per row | `an wen?` = an Robert / an Marc / an Tobias / an Yannik / an Max | FR-2.3 |
-| A6 | **Negative entries** for money coming back | `Pfandsammlung` −€8.75, `Cashback Marc` −€60.50 | FR-4 |
-| A7 | Zero-amount placeholder rows | `Essen Flammkuchen` €0.00 | FR-2.6 |
-| A8 | **Payments between members** logged in the same ledger | `Zahlung` €50.00 Robert → Max; `Zahlung` €4.00 Robert → Marc | FR-5 |
-| A9 | Manual correction rows | `Umbuchung für die Gesamtzeile` −€70.00 | FR-6 |
-| A10 | Per-person totals and a grand total | row `Gesamt` €1,987.45 | FR-7.1 |
-| A11 | "Already paid" tracked with an as-of date | `Bereits gezahlte Kosten (Stand: 06.03)` | FR-7.2 |
-| A12 | Outstanding = total − already paid | row `Offen` | FR-7.3 |
-| A13 | A gross who-owes-whom matrix | rows 42–46, one row per creditor, `///` on the diagonal | FR-8.1 |
-| A14 | A netted matrix of what to actually transfer, colour-coded | rows 49–53 + `Summe` row, green = to be paid | FR-8.2 |
-| A15 | A per-person tip column | `Trinkgeld p.P.` (unused so far) | FR-3.7 |
-| A16 | Colour marks confirmed/paid cells | green cells in `Miete` rows and the settlement block | FR-7.4 |
+| # | Behaviour | Requirement |
+|---|---|---|
+| A1 | Expense with a total and a share per person — €465.35 of rent as 5 × €93.07 | FR-3.1 |
+| A2 | Equal split is the default | FR-3.2 |
+| A3 | Split across a **subset** of participants — €168.00 at the theme park as €42.00 × 4, one person stayed behind | FR-3.3 |
+| A4 | **Unequal, per-person amounts** — a €120 dinner as 29.45 / 32.45 / 36.12 / 21.95 | FR-3.4 |
+| A5 | The payer recorded per entry, not assumed | FR-2.3 |
+| A6 | **Negative entries** for money coming back — a −€8.75 bottle deposit, a −€60.50 cashback | FR-4 |
+| A7 | Zero-amount placeholder entries, logged before the amount is known | FR-2.6 |
+| A8 | **Payments between members** in the same ledger — €50.00 from one person to another | FR-5 |
+| A9 | Manual correction entries | FR-6 |
+| A10 | Per-person totals and a grand total | FR-7.1 |
+| A11 | "Already paid" tracked with an as-of date | FR-7.2 |
+| A12 | Outstanding = total − already paid | FR-7.3 |
+| A13 | A gross who-owes-whom matrix, one row per creditor | FR-8.1 |
+| A14 | A netted matrix of what to actually transfer | FR-8.2 |
+| A15 | A per-person tip, split before the rest | FR-3.7 |
+| A16 | Marking an individual share confirmed or paid | FR-7.4 |
 
-### 4.1 Pain points found in the actual data (these justify the build)
+### 4.1 What goes wrong when it is done by hand (this is why the app exists)
 
-These are real defects present in the current sheet — the app must make them
-impossible, not merely easier to spot:
+None of these are hypothetical — each has happened on a real trip. The app must
+make them impossible, not merely easier to spot:
 
-1. **Shares don't reconcile to the total.** `Essen Saarbrücken`: 11.75 + 7.50 +
-   19.75 = **€39.00** but the price says **€38.95** (over by 5 ct). `Casamore`:
-   29.45 + 32.45 + 36.12 + 21.95 = **€119.97** vs **€120.00** (under by 3 ct).
+1. **Shares don't reconcile to the total.** A €38.95 dinner split three ways as
+   11.75 + 7.50 + 19.75 = **€39.00**, over by 5 ct. A €120.00 bill split four
+   ways as 29.45 + 32.45 + 36.12 + 21.95 = **€119.97**, under by 3 ct.
    → *The app must guarantee Σ shares == total by construction (FR-3.6, §5.1).*
-2. **Rounding drift on equal splits.** €55.18 / 5 = €11.036, stored as €11.04 ×
-   5 = €55.20. Cents are invented, and the same member can absorb the odd cent
-   on every expense — €0.10 of spread over ten such rows.
+2. **Rounding drift on equal splits.** €55.18 / 5 = €11.036, written down as
+   €11.04 × 5 = €55.20. Cents are invented, and the same member absorbs the odd
+   cent on every expense — €0.10 of spread over ten such entries.
    → *Store the share exactly and round only at the payment boundary (§5.1).*
-3. **The totals row needed a manual fudge.** Per-person totals sum to €1,917.45
-   against a grand total of €1,987.45; the gap is patched by an
-   `Umbuchung für die Gesamtzeile` of −€70.00 booked on one person.
+3. **The totals need a manual fudge.** Per-person totals sum to €1,917.45
+   against a grand total of €1,987.45; the gap gets patched with a −€70.00
+   correction booked on one person to make the line agree.
    → *Adjustments must be first-class, reason-bearing entries, never a hack to
    force a total (FR-6); the invariant in FR-9.1 must hold continuously.*
-4. **Debt matrix is hand-maintained** and only bilaterally netted, so more
-   transfers happen than necessary.
+4. **The debt matrix is maintained by hand** and only bilaterally netted, so
+   more transfers happen than necessary.
    → *Derived, never typed; optimal settlement offered (FR-8.3).*
 5. **No audit trail.** Who changed a number, and when, is unknowable.
    → *FR-10.*
-6. **Single-writer bottleneck.** One person owns the sheet, everyone else sends
-   them WhatsApp messages during the trip.
+6. **Single-writer bottleneck.** One person keeps the tally, everyone else sends
+   them messages during the trip.
    → *Multi-user real-time ledger (FR-1).*
 7. **No receipts.** Disputes are settled from memory.
    → *FR-2.5.*
@@ -284,7 +288,7 @@ universally rather than per type.
 
 ### 5.1 Money and precision model (D8)
 
-The sheet's rounding defects (§4.1) come from rounding **every expense** to
+The rounding defects in §4.1 come from rounding **every expense** to
 cents. €55.18 split five ways is €11.036 per person; forcing that to €11.04
 invents money, and whoever absorbs the odd cent absorbs it again on the next
 expense. Ten such expenses put a **€0.10 spread** between the luckiest and
@@ -371,8 +375,8 @@ the signup wall never blocks *other people's* expense entry.
 |---|---|---|
 | FR-2.1 | M | Add expense: description, amount, date (defaults to now), payer (defaults to me), split rule. |
 | FR-2.2 | M | Edit and soft-delete any entry; deletions are reversible and visible in history. |
-| FR-2.3 | M | Payer selectable from participants; **multiple payers** with explicit amounts (replaces `an wen?`). |
-| FR-2.4 | S | Category with icon (rent, groceries, fuel, tolls, parking, restaurant, activity, other) — derived from the sheet's actual rows. |
+| FR-2.3 | M | Payer selectable from participants; **multiple payers** with explicit amounts . |
+| FR-2.4 | S | Category with icon (rent, groceries, fuel, tolls, parking, restaurant, activity, other) — the kinds of cost a road trip produces. |
 | FR-2.5 | S | Attach one or more receipt photos, camera-first on mobile. Client-side compression before upload; every receipt records `uploaded_at` for retention (FR-12.4). |
 | FR-2.6 | S | Allow a €0.00 entry as a placeholder to be filled in later; flag it as incomplete. |
 | FR-2.7 | S | Duplicate an entry ("same again"), and templates for recurring costs (fuel, tolls). |
@@ -387,7 +391,7 @@ the signup wall never blocks *other people's* expense entry.
 | FR-3.1 | M | Split among a selectable subset of participants (default: every participant present at the entry's date, placeholders included). |
 | FR-3.2 | M | **Equal** split. |
 | FR-3.3 | M | Include/exclude toggle per participant, one tap each. |
-| FR-3.4 | M | **Exact amounts** per participant (covers `Casamore`, `Essen Saarbrücken`). |
+| FR-3.4 | M | **Exact amounts** per participant (a shared bill where everyone knows what they ordered). |
 | FR-3.5 | S | **Weights/shares** (e.g. 2:1:1) and **percentages**. *Shipped in the entry form, and the rule is stored with the entry, so reopening restores it and an edit re-applies it to the new total.* |
 | FR-3.6 | M | Guarantee Σ shares == total. On equal/weight/percentage splits, shares are computed and stored as `Precise` (§5.1) so they sum to the total exactly with no cent to allocate; the €11.036 case is stored as €11.036. On exact-amount splits the shares are `Money` typed by a human, so saving is blocked until the residual is €0.00, offering "assign remainder to …". Display rounds per P3/P4 and shows the rounded shares summing to the total. |
 | FR-3.7 | S | Per-person surcharge line on an entry — **tip** (`Trinkgeld p.P.`), service charge, deposit — added on top of the split base. *Confirmed in scope (D6). Shipped as one tip per person, carved out of the entry total before the rule divides the rest, and stored with the entry so an edit cannot silently redistribute it; a per-person differing surcharge is still open.* |
@@ -415,7 +419,7 @@ an entry whose shares do not sum to its total.
 |---|---|---|
 | FR-5.1 | M | Record a payment from participant A to participant B with amount and date (the `Zahlung` rows). It changes balances but adds €0 to trip cost. |
 | FR-5.2 | M | Transfers appear in the ledger, filterable and separable from expenses. |
-| FR-5.3 | S | A recorded transfer counts toward balances immediately (as the sheet's `Zahlung` rows do). The recipient is notified and can **dispute** it; a disputed transfer stays in the balance but is flagged on both members' views until resolved or deleted. *Shipped: recipient-only, enforced server-side; flagged in the ledger, on the overview and on the entry; withdrawn by the person who raised it. The notification itself waits for push (FR-10.4) — until then it surfaces on next sync.* |
+| FR-5.3 | S | A recorded transfer counts toward balances immediately. The recipient is notified and can **dispute** it; a disputed transfer stays in the balance but is flagged on both members' views until resolved or deleted. *Shipped: recipient-only, enforced server-side; flagged in the ledger, on the overview and on the entry; withdrawn by the person who raised it. The notification itself waits for push (FR-10.4) — until then it surfaces on next sync.* |
 | FR-5.4 | S | One-tap "settle up" that pre-fills a transfer from the settlement plan. |
 | FR-5.5 | C | Deep-link to PayPal.me / generate SEPA QR (EPC) or a copyable IBAN block for the recipient. |
 | FR-5.6 | W | Executing the payment inside the app. |
@@ -439,7 +443,7 @@ an entry whose shares do not sum to its total.
 | FR-7.5 | S | Ledger view: chronological, searchable, filterable by participant / category / type / date. |
 | FR-7.6 | S | Drill-down: tapping a balance shows exactly which entries produced it. |
 | FR-7.7 | C | Statistics: spend per category, per person, per day; largest expense; spend curve over the trip. |
-| FR-7.8 | C | Export CSV / XLSX / PDF (a spreadsheet-shaped export eases the migration away from the sheet and gives an exit path). *CSV shipped: entries × participants, totals and the settlement plan, in the locale's dialect; XLSX and PDF still open.* |
+| FR-7.8 | C | Export CSV / XLSX / PDF (a spreadsheet-shaped export gives an exit path — the data is never trapped in the app). *CSV shipped: entries × participants, totals and the settlement plan, in the locale's dialect; XLSX and PDF still open.* |
 
 ### FR-8 Settlement
 
@@ -520,7 +524,7 @@ build the gross matrix `D[a][b]` = what *a* owes *b*, accumulated per entry
 (payer gets credited, each beneficiary debited). Then for each pair
 `net = D[a][b] − D[b][a]`; emit one transfer for the positive direction.
 
-*Illustration (from the sheet, for clarity on what "bilateral" means):* Max owes
+*Illustration, for clarity on what "bilateral" means:* Max owes
 Yannik €21.88 and Yannik owes Max €11.75 → Max pays Yannik **€10.13**. Yannik
 owes Robert €150.54, Robert owes Yannik €41.88 → Yannik pays Robert **€108.66**.
 This is documentation of the algorithm, not a test fixture (D7).
@@ -569,11 +573,11 @@ applying the plan drives every balance to exactly zero.
 | NFR-6 | Privacy / GDPR | Personal data limited to display name + e-mail; export and delete-my-data supported (FR-1.9); receipts in a private bucket behind signed, expiring URLs; EU hosting. Retention: 12 months after a trip closes by default, configurable per trip, enforced by FR-12.6 once it ships. |
 | NFR-7 | Data integrity | Nightly backups, point-in-time restore; soft deletes; append-only audit log. |
 | NFR-8 | i18n / l10n | **English source strings, German shipped from v0.1** (D10). No user-facing string hardcoded in a component; all text extracted from the first commit. Locale-aware number and date formatting (`€1.234,56` vs `€1,234.56`); currency symbol per trip. |
-| NFR-9 | Accessibility | WCAG 2.1 AA: don't encode meaning in colour alone (the sheet's green cells need an icon/label equivalent), touch targets ≥ 44 px, screen-reader labels. |
+| NFR-9 | Accessibility | WCAG 2.1 AA: don't encode meaning in colour alone (a colour-coded "paid" marker needs an icon or label equivalent), touch targets ≥ 44 px, screen-reader labels. |
 | NFR-10 | Cost | Hostable for < €10/month at this group size. |
 | NFR-11 | Maintainability | Split/settlement logic in a pure, framework-free module with property-based tests: invariants I1–I5 and the precision rules P1–P7 expressed as properties over generated trips (random amounts, participant counts, split rules, refunds and transfers). This is the primary correctness net. |
 | NFR-12 | Observability | Error tracking + a daily invariant check alerting if any trip's balances don't sum to zero. |
-| NFR-13 | Testability | No spreadsheet-derived fixtures or import tooling (D7). Correctness is demonstrated by the property tests of NFR-11 plus worked unit cases for the known-hard splits (n-way indivisible amounts, refunds, mixed exact/equal, settlement residuals). CI fails on any invariant violation. |
+| NFR-13 | Testability | No transcribed fixtures or import tooling (D7). Correctness is demonstrated by the property tests of NFR-11 plus worked unit cases for the known-hard splits (n-way indivisible amounts, refunds, mixed exact/equal, settlement residuals). CI fails on any invariant violation. |
 | NFR-14 | Portability | Hosting is deferred (D3), so three constraints are binding from the first commit: (a) `trip_id` on every row; (b) no query, index or job that spans trips; (c) the domain layer imports no framework, ORM or vendor SDK. Managed auth and managed storage may be used at the edges, never inside the core. |
 | NFR-15 | Store compliance | Both stores at launch (D9). Release-blocking, not polish: privacy nutrition labels / Data Safety form, in-app account deletion (FR-1.9), Sign in with Apple parity (FR-1.10), a reachable privacy policy and support URL, age rating. Digital subscriptions must use in-app purchase on both platforms (15–30%), which constrains any future pricing (FR-12.7). Listing assets are deferred with the public launch (D14); the compliance items above are not. Budget review latency into every release. |
 
@@ -661,13 +665,13 @@ Shaped by D1 (stores), D2 (accounts), D3 (portability), D5 (multi-tenant).
 
 ## 11. Release plan
 
-**v0.1 MVP — "replaces the sheet for one trip"**
+**v0.1 MVP — "carries one whole trip"**
 FR-1.1–1.3, FR-1.9–1.10, FR-2.1–2.3, FR-3.1–3.4, FR-3.6, FR-4.1, FR-5.1–5.2,
 FR-7.1–7.3, FR-8.2, FR-8.3, FR-8.6, FR-9.1–9.3, FR-9.6, FR-10.1, FR-11.1,
 FR-12.1–12.2, FR-12.4, NFR-8, NFR-11, NFR-13–15.
 *Exit criteria:* (a) the property suite (NFR-11) passes, including the precision
-rules P1–P7; (b) the five of you run a whole trip in it without opening a
-spreadsheet.
+rules P1–P7; (b) the five of you run a whole trip in it with nothing tracked on
+the side.
 
 *Also needed before v0.1 ships:* SMTP credentials for the magic link (Q11c).
 Without them nobody outside this machine can sign in — the dev API's
@@ -727,7 +731,7 @@ Answered questions Q1–Q9, Q11, Q12, Q14 are recorded in §1.3.
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Group falls back to the spreadsheet mid-trip | Project fails G1 | Nail fast capture + offline first; CSV export as a safety valve |
+| Group falls back to tracking by hand mid-trip | Project fails G1 | Nail fast capture + offline first; CSV export as a safety valve |
 | **Signup wall (D2) blocks entry during the trip** | Adoption; the wall lands exactly when people are on bad roaming | Placeholder participants (FR-1.3) are must-have, not nice-to-have; sign-in must work on a weak connection and survive backgrounding |
 | **App-store review delays a mid-trip fix** | You can't patch a bug while travelling | TestFlight/internal builds for the group; Expo over-the-air updates for JS-only fixes; the web build as an always-current escape hatch |
 | **Apple rejection on account rules** | Launch blocked late | FR-1.9 and FR-1.10 built in v0.1, not retrofitted |

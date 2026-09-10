@@ -77,7 +77,7 @@ describe('allocate — invariant I1', () => {
   });
 });
 
-describe('the sheet cases', () => {
+describe('cases taken from a real trip', () => {
   it('€55.18 / 5 is stored as five shares of exactly 11.036 and displays as 11.04 ×3 + 11.03 ×2 (FR-3.6 acceptance)', () => {
     const total = money(5518n, EUR);
     const shares = allocate(total, { kind: 'equal', among: [Y, MX, R, T, MC] }, { seed: 'einkauf-krefeld' });
@@ -93,7 +93,7 @@ describe('the sheet cases', () => {
     expect(shares.some((s) => s.participantId === MC)).toBe(false);
   });
 
-  it('Casamore as typed in the sheet (119.97 vs 120.00) is rejected with the residual, so the UI can offer to assign it', () => {
+  it('exact amounts that fall short of the total (119.97 vs 120.00) are rejected with the residual, so the UI can offer to assign it', () => {
     const amounts = { [Y]: money(2945n, EUR), [R]: money(3245n, EUR), [T]: money(3612n, EUR), [MC]: money(2195n, EUR) };
     expect(() => allocate(money(12000n, EUR), { kind: 'exact', amounts }, { seed: 'casamore' })).toThrow(DomainError);
     expect(exactResidual(money(12000n, EUR), Object.values(amounts)).minor).toBe(3n);

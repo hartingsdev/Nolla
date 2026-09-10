@@ -73,7 +73,7 @@ describe('validateEntry', () => {
   });
 });
 
-describe('the sheet, in miniature', () => {
+describe('a real trip, in miniature', () => {
   it('Cashback Marc: a negative expense paid by Marc means Marc owes everyone their slice', () => {
     const MC = pid('marc');
     const among = [Y, MX, R, MC];

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A shared expense tracker for group vacations, replacing a spreadsheet. pnpm
+A shared expense tracker for group vacations. pnpm
 workspace monorepo: Expo (iOS/Android/web) + Hono API + Postgres.
 
 `docs/requirements.md` and `docs/architecture.md` are the source of truth for
@@ -93,5 +93,5 @@ test. A umlaut once rendered clipped on web while the DOM text was correct.
 ## UI
 
 Every user-visible string goes through i18next (EN source, DE shipped); ESLint
-fails on literal JSX text. German is not a translation of convenience here — the
-group using the app speaks it, and the existing spreadsheet is in it.
+fails on literal JSX text. German is not a translation of convenience here — it
+is what the group using the app speaks.

@@ -253,7 +253,7 @@ the form falls back to telling equal from exact by looking at the shares.
 
 ### 4.7 Export
 
-`tripCsv` (FR-7.8) turns a trip into the shape of the sheet it replaces: one row
+`tripCsv` (FR-7.8) turns a trip into a spreadsheet shape: one row
 per entry, a reason column for adjustments (FR-6.1), one column per participant
 holding that person's share, then the totals block and the settlement plan. It stays in the domain because it is a
 pure function over the same ledger the screens read — which is what makes the
@@ -649,7 +649,7 @@ built on a working API rather than mocks.
 | M8 | **Balances + settle up** — home balance headline, per-person list, ledger, settlement plan (3 kinds), "mark paid" → transfer, freeze/reopen | M7 | Plan applied via "mark paid" drives all balances to zero; UI shows who absorbed the residual |
 | M9 | **Offline read + entitlement seams + retention metadata + nightly invariant job** | M8 | Ledger visible in airplane mode; `check()` called on upload/create paths; job alerts on a deliberately corrupted row |
 | M10 | **Distribution** — EAS profiles, store-compliance items (privacy forms, deletion, SIWA), channel per D15 | M9 | The five of you have it installed; an OTA fix reaches them without a store review |
-| M11 | **The trip** | M10 | One real vacation run end to end with no spreadsheet (G1) — the exit criterion |
+| M11 | **The trip** | M10 | One real vacation run end to end with no parallel tally (G1) — the exit criterion |
 
 M1–M2 and M3–M4 are independent and can run in parallel; M5 joins them. Nothing
 in M6–M8 should start against mocked endpoints — the API is small enough to be
