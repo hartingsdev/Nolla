@@ -1,0 +1,56 @@
+name: android-apk
+# An installable APK without an Expo account, a Play Console or an Android SDK
+# on anyone's laptop: run this workflow, download the artifact on the phone,
+# open it. See README → "On an Android phone".
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: >-
+          API the build points at by default. Leave empty for http://localhost:8080;
+          the sign-in screen can change it on the device either way.
+        required: false
+        default: ''
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17            # React Native 0.86 builds on JDK 17
+      - run: pnpm install --frozen-lockfile
+
+      # The native project is generated from app.json, never committed: whatever
+      # this workflow builds is what the managed config says, with no android/
+      # directory to drift out of sync. --no-install because pnpm already linked
+      # the workspace and expo would reach for npm.
+      - name: Generate the native Android project
+        run: pnpm --filter @vst/mobile exec expo prebuild --platform android --no-install
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      # assembleRelease bundles the JS, so EXPO_PUBLIC_API_URL is inlined here.
+      # Expo's template signs release builds with the shared debug keystore — good
+      # enough to sideload, not something to publish. A real keystore comes with
+      # the Play Console (M10), and switching to it means uninstalling this build
+      # first: Android refuses an update signed by a different key.
+      - name: Build the APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          EXPO_PUBLIC_API_URL: ${{ inputs.api_url }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: trip-ledger-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          if-no-files-found: error

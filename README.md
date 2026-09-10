@@ -61,9 +61,37 @@ magic link, so open <http://localhost:8080/dev/magic-links> and follow the URL
 it lists. From there you can create a shared trip, invite a second browser
 profile, and watch both sides converge.
 
-**On a phone**: `pnpm --filter @vst/mobile start`, then scan the QR code with
-Expo Go. Set `EXPO_PUBLIC_API_URL` to your machine's LAN address if you want
+**On a phone, quickly**: `pnpm --filter @vst/mobile start`, then scan the QR code
+with Expo Go. Set `EXPO_PUBLIC_API_URL` to your machine's LAN address if you want
 the phone to reach the dev API rather than `localhost`.
+
+**On an Android phone, as a real installed app** — no Expo account, no Play
+Console, no Android SDK anywhere:
+
+1. Actions → *android-apk* → *Run workflow*. Leave the API field empty unless a
+   server is already reachable from the phone; the sign-in screen can point the
+   app somewhere else at any time.
+2. When it finishes, download the `trip-ledger-apk` artifact **on the phone**,
+   unzip it, and open the `.apk`. Android asks once whether this browser or file
+   manager may install apps; say yes.
+
+What the workflow does is what a developer would do by hand: generate the native
+project from `app.json` (`expo prebuild`), then `./gradlew assembleRelease`. The
+native `android/` directory is never committed, so the build always matches the
+managed config.
+
+Two things to know about that APK. It is signed with the *shared debug keystore*
+Expo's template ships, which is fine for installing on your own phone and unfit
+for anything else; when a Play Console keystore replaces it (M10), the phone will
+refuse the update and the sideloaded build has to be uninstalled first. And a
+trip you keep on the device works offline, but a shared trip needs an API the
+phone can reach — a laptop's LAN address (`http://192.168.x.x:8080`) while the
+dev API runs, entered on the sign-in screen.
+
+`apps/mobile/eas.json` holds the profiles for the other route — `preview` builds
+the same internal-distribution APK on Expo's servers, `production` an app bundle
+for the Play Store. Both need an Expo account, so nothing here has run against
+them yet.
 
 **Without installing anything but Docker:**
 

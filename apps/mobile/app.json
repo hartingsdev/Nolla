@@ -11,6 +11,7 @@
     "ios": { "supportsTablet": true, "bundleIdentifier": "cloud.hartings.tripledger" },
     "android": {
       "package": "cloud.hartings.tripledger",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

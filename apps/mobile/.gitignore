@@ -1,5 +1,10 @@
 dist/
 .expo/
+
+# expo prebuild output: the native projects are generated from app.json on demand
+# (CI does it for the Android APK), never edited by hand and never committed.
+android/
+ios/
 playwright-report/
 test-results/
 
