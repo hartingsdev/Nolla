@@ -39,8 +39,21 @@ export default function Overview() {
     : mine.minor < 0n ? t('overview.youOwe', { amount: formatMoney(M.abs(mine), locale) })
     : t('overview.youGetBack', { amount: formatMoney(mine, locale) });
 
+  /**
+   * One entry point, and it does not decide for you what you are adding: the
+   * form offers expense · payment · adjustment whenever more than one is
+   * writable (#15). It used to be two — a text link for payments and a + that
+   * silently became "record payment" on a frozen trip.
+   */
+  const addButton = rules.canWriteTransfer ? (
+    <Pressable onPress={() => { router.push('/entry/new'); }} accessibilityRole="button" accessibilityLabel={t('overview.addEntry')}
+      style={({ pressed }) => ({ position: 'absolute', right: space.lg, bottom: space.lg, width: 60, height: 60, borderRadius: 30, backgroundColor: th.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1, elevation: 4 })}>
+      <Text style={{ color: th.onPrimary, fontSize: 32, lineHeight: 36 }}>{'+'}</Text>
+    </Pressable>
+  ) : null;
+
   return (
-    <Screen>
+    <Screen overlay={addButton}>
       {trip.meta.remote && (
         <Card style={{ paddingVertical: space.sm }}>
           <Row style={{ justifyContent: 'space-between' }}>
@@ -155,17 +168,6 @@ export default function Overview() {
         ))}
       </Card>
 
-      {rules.canWriteTransfer && participants.length > 0 && (
-        <Link href={{ pathname: '/entry/new', params: { kind: 'transfer' } }} asChild>
-          <Pressable accessibilityRole="button"><Body style={{ color: th.primary, textAlign: 'center' }}>{t('overview.addPayment')}</Body></Pressable>
-        </Link>
-      )}
-      {rules.canWriteTransfer && (
-      <Pressable onPress={() => { router.push(rules.canWriteExpense ? '/entry/new' : { pathname: '/entry/new', params: { kind: 'transfer' } }); }} accessibilityRole="button" accessibilityLabel={rules.canWriteExpense ? t('overview.add') : t('overview.addPayment')}
-        style={({ pressed }) => ({ position: 'absolute', right: space.lg, bottom: space.lg, width: 60, height: 60, borderRadius: 30, backgroundColor: th.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.8 : 1, elevation: 4 })}>
-        <Text style={{ color: th.onPrimary, fontSize: 32, lineHeight: 36 }}>{'+'}</Text>
-      </Pressable>
-      )}
     </Screen>
   );
 }

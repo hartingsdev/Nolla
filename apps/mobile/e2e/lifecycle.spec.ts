@@ -10,8 +10,12 @@ test('freeze → only payments; close blocked until zero; close; reopen', async 
 
   await page.goto('/');
   await expect(page.getByText('Plan frozen: only payments can be recorded.', { exact: false })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add expense' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Record payment' }).first()).toBeVisible();
+  // The write rule is asserted where it lives — in the form — rather than by
+  // reading it off the button's label, which is the coupling #15 removed.
+  await page.getByRole('button', { name: 'Add entry' }).click();
+  await expect(page.getByText('New payment')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Expense', exact: true })).toHaveCount(0);
+  await page.goto('/');
 
   // editing is blocked while settling
   await page.goto('/ledger');
@@ -25,7 +29,7 @@ test('freeze → only payments; close blocked until zero; close; reopen', async 
   await page.getByRole('button', { name: 'Close trip' }).click();
   await expect(page.getByText('Closed and read-only.')).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /Record payment|Add expense/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0);
 
   await page.goto('/trip/settings');
   await page.getByRole('button', { name: 'Reopen' }).click();

@@ -21,7 +21,8 @@
     "add": "Add expense",
     "addPayment": "Record payment",
     "addPeople": "Add people",
-    "needPeople": "Add the people you are splitting with — they need no account."
+    "needPeople": "Add the people you are splitting with — they need no account.",
+    "addEntry": "Add entry"
   },
   "person": {
     "owes": "owes {{amount}}",

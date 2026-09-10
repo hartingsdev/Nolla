@@ -3,15 +3,24 @@ import { Pressable, ScrollView, StyleSheet, Text, type TextStyle, View, type Vie
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { space, useTheme } from '../theme';
 
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+/**
+ * `overlay` is pinned to the screen, not to the content: it renders as a
+ * sibling of the ScrollView rather than inside it. Absolute positioning within
+ * a ScrollView is relative to the scrollable content, so a floating button put
+ * there scrolls away with it (#5).
+ */
+export function Screen({ children, scroll = true, overlay }: { children: ReactNode; scroll?: boolean; overlay?: ReactNode }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const style = { flex: 1, backgroundColor: t.bg } as const;
-  if (!scroll) return <View style={[style, { paddingBottom: insets.bottom }]}>{children}</View>;
+  if (!scroll) return <View style={[style, { paddingBottom: insets.bottom }]}>{children}{overlay}</View>;
   return (
-    <ScrollView style={style} contentContainerStyle={{ padding: space.lg, paddingBottom: insets.bottom + 96, gap: space.lg }} keyboardShouldPersistTaps="handled">
-      {children}
-    </ScrollView>
+    <View style={style}>
+      <ScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: insets.bottom + 96, gap: space.lg }} keyboardShouldPersistTaps="handled">
+        {children}
+      </ScrollView>
+      {overlay}
+    </View>
   );
 }
 

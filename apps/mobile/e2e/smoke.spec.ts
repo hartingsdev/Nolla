@@ -45,3 +45,32 @@ test('language switch changes the UI to German', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Du schuldest 128,92 €')).toBeVisible();
 });
+
+test('the add button stays put when the overview scrolls (#5)', async ({ page }) => {
+  await loadSample(page);
+  // A short viewport rather than a long trip: this has to overflow by a lot
+  // whatever the sample happens to contain, or the assertion below proves
+  // nothing. It used to be that the button, positioned absolutely *inside* the
+  // scroll view, slid up out of reach with the content.
+  await page.setViewportSize({ width: 390, height: 420 });
+  const fab = page.getByRole('button', { name: 'Add entry' });
+  const before = await fab.boundingBox();
+  const scrolled = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('div')].find((d) => d.scrollHeight > d.clientHeight + 5 && getComputedStyle(d).overflowY === 'auto');
+    if (!el) return 0;
+    el.scrollTop = el.scrollHeight;
+    return el.scrollTop;
+  });
+  expect(scrolled, 'the overview has to actually scroll or this proves nothing').toBeGreaterThan(50);
+  expect(await fab.boundingBox()).toEqual(before);
+});
+
+test('one entry point, and it lets you choose what you are adding (#15)', async ({ page }) => {
+  await loadSample(page);
+  // There used to be a "Record payment" link next to the + as well.
+  await expect(page.getByRole('link', { name: 'Record payment' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add entry' }).click();
+  for (const kind of ['Expense', 'Payment', 'Adjustment']) {
+    await expect(page.getByRole('button', { name: kind, exact: true })).toBeVisible();
+  }
+});

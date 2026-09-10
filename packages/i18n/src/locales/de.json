@@ -21,7 +21,8 @@
     "add": "Ausgabe hinzufügen",
     "addPayment": "Zahlung erfassen",
     "addPeople": "Leute hinzufügen",
-    "needPeople": "Füge die Leute hinzu, mit denen du teilst — sie brauchen kein Konto."
+    "needPeople": "Füge die Leute hinzu, mit denen du teilst — sie brauchen kein Konto.",
+    "addEntry": "Eintrag hinzufügen"
   },
   "person": {
     "owes": "schuldet {{amount}}",
