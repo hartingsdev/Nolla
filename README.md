@@ -2,12 +2,13 @@
 
 Five people go on holiday. One books the house, another keeps buying the
 groceries, a third fills up the car twice. Someone skips the theme park. There
-is a refund. On the last evening everybody stares at a spreadsheet and tries to
-work out who owes whom — and whether the numbers even add up.
+is a refund. On the last evening everybody tries to work out who owes whom — and
+whether the numbers even add up.
 
-That spreadsheet exists. It has a column per person, an `an wen?` column for who
-paid, and a debt matrix maintained by hand. It works right up until it doesn't:
-one uneven split, one person paying for four, and the corrections start.
+Splitting evenly is easy, and almost nothing on a trip splits evenly. One person
+pays for four, someone was not there that day, a deposit comes back a week
+later. Keep a running tally by hand and it holds until the first correction;
+after that you are reconciling instead of packing.
 
 Trip Ledger does that job on a phone. Enter what was spent and who it was for;
 it keeps the balances, and when the trip is over it tells you the shortest set
@@ -47,8 +48,8 @@ stay visible.
 
 **Getting the data back out.** Receipts photographed and attached to an entry
 (shared trips only — they live on the server, not the phone). CSV export of
-every entry, the totals and the settlement plan, in the shape of the old
-spreadsheet so it opens where that one did.
+every entry, the totals and the settlement plan — one row per entry and one
+column per person, so it opens in any spreadsheet program.
 
 **On a trip, not in an office.** A trip can live on one phone with no account at
 all, or be shared with the others through an invite link. Shared trips work with
@@ -75,8 +76,8 @@ test asserts that on every build against what is actually on screen.
 <https://github.com/hartingsdev/claude-test/releases/download/android-latest/trip-ledger.apk>
 
 Open that on the phone and tap it. Android asks once whether the browser may
-install apps; say yes. Settings → *Load sample trip* fills it with the first
-rows of the real spreadsheet, so there is something to look at immediately.
+install apps; say yes. Settings → *Load sample trip* fills it with a worked
+example, so there is something to look at before you type anything.
 
 The build is signed with a development key, which is fine for your own phone and
 means two things: your phone will warn you it came from outside the Play Store,
