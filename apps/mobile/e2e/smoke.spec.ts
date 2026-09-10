@@ -56,7 +56,8 @@ test('the add button stays put when the overview scrolls (#5)', async ({ page })
   const fab = page.getByRole('button', { name: 'Add entry' });
   const before = await fab.boundingBox();
   const scrolled = await page.evaluate(() => {
-    const el = [...document.querySelectorAll('div')].find((d) => d.scrollHeight > d.clientHeight + 5 && getComputedStyle(d).overflowY === 'auto');
+    const divs = Array.from(document.querySelectorAll('div'));
+    const el = divs.find((d) => d.scrollHeight > d.clientHeight + 5 && getComputedStyle(d).overflowY === 'auto');
     if (!el) return 0;
     el.scrollTop = el.scrollHeight;
     return el.scrollTop;
