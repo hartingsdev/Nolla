@@ -82,7 +82,18 @@ example, so there is something to look at before you type anything.
 The build is signed with a development key, which is fine for your own phone and
 means two things: your phone will warn you it came from outside the Play Store,
 and a Play Store version later cannot update it — that one needs an uninstall
-first. iPhones need an Apple developer account, which is the next open question.
+first. It is a universal build carrying all four CPU architectures, hence about
+100 MB; the Play Store splits that per device, a sideloaded APK cannot.
+
+**If the phone refuses to install it**, look for Advanced Protection. That mode
+allows Play Store installs only, and no per-app exception talks it out of that —
+the signing key is irrelevant, since it is the source that is blocked. Installing
+over `adb` from a computer can still work, because that path does not go through
+the package installer: enable USB debugging on the phone and run `adb install
+trip-ledger.apk`. `INSTALL_FAILED_USER_RESTRICTED` means the policy covers `adb`
+as well, and the only remaining way onto that device is the Play Store (M10).
+
+iPhones need an Apple developer account, which is the next open question.
 
 **In a browser**, if you have Node: `pnpm install` then
 `pnpm --filter @vst/mobile web`. That is the whole app, in a browser.
