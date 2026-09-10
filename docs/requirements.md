@@ -1,9 +1,14 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.8** · Owner: project team · Date: 2026-09-10
+Status: **Draft v1.9** · Owner: project team · Date: 2026-09-10
 
 **Changelog**
 
+- v1.9 — D17: the goal is the group's own trip; a product for strangers is deferred
+  until after it. Recorded because a competitive comparison found no functional
+  advantage to market, which makes parity work (statistics, multi-currency,
+  itemized splits) the wrong use of the time before the trip. Also frees the
+  naming and icon questions from blocking anything.
 - v1.8 — onboarding pulled forward from v0.3 to the next release as FR-1.13, after
   first use on a real device: a fresh install has no participants, so the empty
   state asks for an expense that cannot be saved. Setup doubles as the tutorial,
@@ -100,6 +105,7 @@ Resolved 2026-09-08. These supersede the open questions in the v1.0 draft.
 | D13 | **Deferred: what the paid tier gates** (Q15) | Owner will decide after a real trip; the storage premise turned out not to hold (note below) | Forces the entitlement model to be *axis-agnostic*: a plan carries a set of named limits, and no limit is special-cased in the domain. Costs a little indirection, buys the freedom to pick the axis later. `receipts.perTrip` and `receipts.bytesPerTrip` stay, but as **abuse guards, not price levers** |
 | D14 | **v0.1 ships through a non-public channel** (Q10) | Whether TestFlight/internal testing or sideloaded dev builds is undecided, but neither needs a public listing | The store listing, screenshots and marketing assets stay out of v0.1 either way. FR-1.9, FR-1.10 and the privacy forms are still built in v0.1, since they gate the eventual listing and are expensive to retrofit |
 | D15 | **Deferred: the specific test-distribution channel** (Q10) | Undecided | Decide before v0.1 ships. TestFlight needs a paid Apple account and light review; free-account sideloading expires every 7 days and needs re-signing per device |
+| D17 | **The goal is the group's own trip; being a product for strangers is deferred** | A feature comparison against Splitwise and the FOSS app *Quits* found no functional advantage worth marketing: split types, integer-minor-unit money, largest-remainder rounding, CSV export and offline use are all present in both, and *Quits* is ahead on itemized splits, multi-currency and statistics. The distinctions that remain — a rotating residual cent, per-field audit trail, recipient-only dispute, three explained settlement plans with minimality proven rather than claimed — are craft, not a reason anyone installs an app | Scope is set by *"what breaks on a real trip"*, not by parity: no statistics (FR-7.7), no multi-currency (FR-2.8), no itemized splits (FR-3.9), no work on positioning or store presence beyond what distribution to five phones requires. The naming and icon questions stop being blockers: the Play `applicationId` is permanent, but it need not match a future brand. Revisit after the trip, when there is evidence instead of speculation. If it is ever revisited, the one wedge worth testing is that **only the organiser needs the app** — placeholder participants (FR-1.3) and the account-free local trip already exist and merely need to be the point rather than a detail |
 | D16 | **E-mail and push behind a `Notifier` port** (Q11) | Portability (D3); volume is unknown | v0.1 wires a throwaway implementation (Expo push, any SMTP for magic links). The core depends on the port, never a vendor SDK (NFR-14). Swapping later is one adapter |
 
 **Scale path implied by D3** (the shape this category of app takes): stateless API
