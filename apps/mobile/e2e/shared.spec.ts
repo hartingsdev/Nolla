@@ -36,11 +36,11 @@ test('two people share one trip through the API: invite, claim, add expense, see
   await expect(robert.getByText(/Synced|Not synced yet|waiting to sync/)).toBeVisible();
 
   // He adds Max as a placeholder and creates an invite link
-  await robert.goto('/participants');
+  await robert.goto('/trip/participants');
   await robert.getByLabel('Name').fill('Max');
   await robert.getByRole('button', { name: 'OK' }).click();
   await expect(robert.getByText('Max')).toBeVisible();
-  await robert.goto('/settings');
+  await robert.goto('/trip/settings');
   await robert.getByRole('button', { name: 'Create invite link' }).click();
   const inviteUrl = (await robert.getByText(/\/i\//).innerText()).trim();
   expect(inviteUrl).toMatch(/^http:\/\/localhost:8787\/i\//);
@@ -83,7 +83,7 @@ test('an invite opened before sign-in is resumed after sign-in', async ({ browse
   await owner.getByLabel('Trip name').fill('Late joiner');
   await owner.getByRole('button', { name: 'New shared trip' }).click();
   await expect(owner.getByRole('heading', { name: 'Late joiner' })).toBeVisible();
-  await owner.goto('/settings');
+  await owner.goto('/trip/settings');
   await owner.getByRole('button', { name: 'Create invite link' }).click();
   const inviteUrl = (await owner.getByText(/\/i\//).innerText()).trim();
 
@@ -158,10 +158,10 @@ test('the recipient disputes a payment; both phones see it and the balances do n
   await robert.getByRole('button', { name: 'New shared trip' }).click();
   await expect(robert.getByRole('heading', { name: 'Streitfall' })).toBeVisible();
 
-  await robert.goto('/participants');
+  await robert.goto('/trip/participants');
   await robert.getByLabel('Name').fill('Max');
   await robert.getByRole('button', { name: 'OK' }).click();
-  await robert.goto('/settings');
+  await robert.goto('/trip/settings');
   await robert.getByRole('button', { name: 'Create invite link' }).click();
   const inviteUrl = (await robert.getByText(/\/i\//).innerText()).trim();
 
@@ -228,12 +228,12 @@ test('a joiner names themselves, an admin corrects a name, and the old ones stay
   await expect(owner.getByRole('heading', { name: 'Namen' })).toBeVisible();
 
   // The creator is named after their sign-in address until someone fixes it.
-  await owner.goto('/participants');
+  await owner.goto('/trip/participants');
   await expect(owner.getByText(`${ownerName} (you)`)).toBeVisible();
 
   await owner.getByLabel('Name').fill('Mx');
   await owner.getByRole('button', { name: 'OK' }).click();
-  await owner.goto('/settings');
+  await owner.goto('/trip/settings');
   await owner.getByRole('button', { name: 'Create invite link' }).click();
   const inviteUrl = (await owner.getByText(/\/i\//).innerText()).trim();
 
@@ -246,7 +246,7 @@ test('a joiner names themselves, an admin corrects a name, and the old ones stay
   await max.getByRole('button', { name: 'Join' }).click();
   await expect(max.getByRole('heading', { name: 'Namen' })).toBeVisible();
 
-  await max.goto('/participants');
+  await max.goto('/trip/participants');
   await expect(max.getByText(/^Max \(you\)/)).toBeVisible();
   await expect(max.getByText(/Formerly: Mx/)).toBeVisible();
 
@@ -254,7 +254,7 @@ test('a joiner names themselves, an admin corrects a name, and the old ones stay
   expect(await max.getByRole('button', { name: 'Rename' }).count()).toBe(1);
 
   // The owner is an admin: they can rename themselves and everyone else.
-  await owner.goto('/participants');
+  await owner.goto('/trip/participants');
   await expect(owner.getByText(/^Max/)).toBeVisible({ timeout: 25_000 });
   expect(await owner.getByRole('button', { name: 'Rename' }).count()).toBe(2);
   await owner.getByRole('button', { name: 'Rename' }).first().click();
@@ -264,6 +264,6 @@ test('a joiner names themselves, an admin corrects a name, and the old ones stay
   await expect(owner.getByText(`Formerly: ${ownerName}`)).toBeVisible({ timeout: 20_000 });
 
   // The rename reaches the other phone, and the ledger still adds up.
-  await max.goto('/participants');
+  await max.goto('/trip/participants');
   await expect(max.getByText(/^Robert/)).toBeVisible({ timeout: 25_000 });
 });

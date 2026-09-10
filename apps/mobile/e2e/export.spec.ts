@@ -15,7 +15,7 @@ async function downloadCsv(page: Page): Promise<{ name: string; text: string }> 
 }
 
 test('exports the trip as a spreadsheet-shaped CSV (FR-7.8)', async ({ page }) => {
-  await page.goto('/settings');
+  await page.goto('/trip/settings');
   const { name, text } = await downloadCsv(page);
   expect(name).toBe(`elsass-2026-${new Date().toISOString().slice(0, 10)}.csv`);
   expect(text.codePointAt(0)).toBe(0xfeff); // BOM, or Excel mangles the umlauts
@@ -45,6 +45,7 @@ test('exports the trip as a spreadsheet-shaped CSV (FR-7.8)', async ({ page }) =
 test('German export uses semicolons and decimal commas, so Excel parses it', async ({ page }) => {
   await page.goto('/settings');
   await page.getByRole('button', { name: 'DE', exact: true }).click();
+  await page.goto('/trip/settings');
   const { text } = await downloadCsv(page);
   const rows = text.replace(/^\uFEFF/, '').split('\r\n').map((r) => r.split(';'));
   expect(rows[0]?.slice(0, 2)).toEqual(['Reise', 'Elsass 2026']);
@@ -58,7 +59,7 @@ test('an entry added in the app appears in the next export', async ({ page }) =>
   await page.getByLabel('Amount').first().fill('20');
   await page.getByLabel('Description').first().fill('Seilbahn');
   await page.getByRole('button', { name: 'Save' }).click();
-  await page.goto('/settings');
+  await page.goto('/trip/settings');
   const { text } = await downloadCsv(page);
   expect(text).toContain('Seilbahn');
 });

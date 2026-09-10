@@ -23,7 +23,8 @@ export default function RootLayout() {
         <Stack.Screen name="entry/[id]/index" options={{ title: tr('entry.shares') }} />
         <Stack.Screen name="entry/[id]/edit" options={{ presentation: 'modal', title: tr('entry.edit') }} />
         <Stack.Screen name="person/[id]" options={{ title: '' }} />
-        <Stack.Screen name="participants" options={{ title: tr('participants.title') }} />
+        <Stack.Screen name="trip/participants" options={{ title: tr('participants.title') }} />
+        <Stack.Screen name="trip/settings" options={{ title: tr('trip.settings') }} />
         <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
         <Stack.Screen name="trips" options={{ title: tr('trips.title') }} />
         <Stack.Screen name="signin" options={{ title: tr('auth.signIn') }} />

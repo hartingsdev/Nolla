@@ -1,61 +1,26 @@
-import { useState } from 'react';
-import { Alert, Platform, TextInput } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { transition } from '@vst/domain';
-import { useCsvFile, saveCsv } from '../src/export';
-import { useAllSettled, useLiveEntries, useTrip } from '../src/selectors';
 import { useApi } from '../src/sync/useSync';
 import { useStore } from '../src/store';
-import { useTheme } from '../src/theme';
 import { Body, Button, Card, Chip, H2, Row, Screen } from '../src/components/ui';
 
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'DKK', 'SEK', 'NOK', 'PLN', 'CZK', 'JPY'] as const;
-
-export default function Settings() {
+/**
+ * App settings: everything that does NOT change when you switch trips
+ * (app/trip/settings.tsx is the other half). The store already draws the same
+ * line — these live at the root of it, trip settings live on a TripState.
+ */
+export default function AppSettings() {
   const { t, i18n } = useTranslation();
-  const th = useTheme();
   const router = useRouter();
   const api = useApi();
-  const trip = useTrip();
   const auth = useStore((s) => s.auth);
   const setAuth = useStore((s) => s.setAuth);
-  const setTripMeta = useStore((s) => s.setTripMeta);
-  const setStatus = useStore((s) => s.setStatus);
-  const loadSample = useStore((s) => s.loadSample);
-  const clearAll = useStore((s) => s.clearAll);
   const setLocale = useStore((s) => s.setLocale);
   const removeTrip = useStore((s) => s.removeTrip);
-  const hasEntries = useLiveEntries().length > 0;
-  const allSettled = useAllSettled();
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [exported, setExported] = useState<string | null>(null);
-  const csvFile = useCsvFile();
-  const meta = trip.meta;
-  const ctx = { isAdmin: true, allBalancesZero: allSettled };
-  const can = (action: 'freeze' | 'reopen' | 'close') => transition(meta.status, action, ctx).ok;
+  const loadSample = useStore((s) => s.loadSample);
+  const clearAll = useStore((s) => s.clearAll);
 
-  const apply = async (action: 'freeze' | 'reopen' | 'close') => {
-    setError(null);
-    const r = transition(meta.status, action, ctx);
-    if (!r.ok) return;
-    if (meta.remote) {
-      try { const res = await api.transition(meta.id, action); setStatus(res.status); }
-      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    } else setStatus(r.status);
-  };
-  const rename = (name: string) => { setTripMeta({ name }); if (meta.remote) void api.patchTrip(meta.id, { name }).catch(() => { /* next sync pulls the truth */ }); };
-  const createInvite = async () => {
-    setError(null);
-    try { const r = await api.createInvite(meta.id); setInviteUrl(r.url); setCopied(false); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-  };
-  const copy = async () => {
-    if (!inviteUrl) return;
-    try { await navigator.clipboard.writeText(inviteUrl); setCopied(true); } catch { /* shown as text anyway */ }
-  };
   const confirm = (msg: string, onYes: () => void) => {
     if (Platform.OS === 'web') { if (globalThis.confirm(msg)) onYes(); return; }
     Alert.alert(msg, undefined, [{ text: t('common.no'), style: 'cancel' }, { text: t('common.yes'), style: 'destructive', onPress: onYes }]);
@@ -66,54 +31,10 @@ export default function Settings() {
       void api.deleteAccount().then(() => { setAuth(null); for (const x of Object.values(useStore.getState().trips)) if (x.meta.remote) removeTrip(x.meta.id); router.replace('/trips'); });
     });
   };
-  const exportCsv = async () => {
-    setError(null);
-    try { const f = csvFile(); await saveCsv(f.filename, f.text); setExported(f.filename); }
-    catch (e) { setError(t('export.failed', { message: e instanceof Error ? e.message : String(e) })); }
-  };
-  const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: th.border } as const;
 
   return (
     <Screen>
-      <Card>
-        <H2>{t('trip.name')}</H2>
-        <TextInput value={meta.name} onChangeText={rename} accessibilityLabel={t('trip.name')} style={inputStyle} />
-        <H2>{t('trip.currency')}</H2>
-        <Row>{CURRENCIES.map((c) => <Chip key={c} label={c} selected={meta.ccy === c} onPress={() => { setTripMeta({ ccy: c }); }} disabled={hasEntries || meta.remote} />)}</Row>
-        {hasEntries && <Body muted style={{ fontSize: 13 }}>{t('trip.currencyLocked')}</Body>}
-      </Card>
-
-      {meta.remote && (
-        <Card>
-          <H2>{t('invite.title')}</H2>
-          <Button label={t('invite.create')} onPress={() => { void createInvite(); }} />
-          {inviteUrl && (
-            <>
-              <Body muted style={{ fontSize: 13 }}>{t('invite.created')}</Body>
-              <Body selectable style={{ fontSize: 13 }}>{inviteUrl}</Body>
-              <Row><Chip label={copied ? t('invite.copied') : t('invite.copy')} selected={copied} onPress={() => { void copy(); }} /></Row>
-            </>
-          )}
-        </Card>
-      )}
-
-      <Card>
-        <H2>{t(`trip.status.${meta.status}`)}</H2>
-        <Body muted>{t(`trip.statusHint.${meta.status}`)}</Body>
-        <Row>
-          {can('freeze') && <Button label={t('trip.freeze')} onPress={() => { void apply('freeze'); }} />}
-          {meta.status === 'settling' && <Button label={t('trip.close')} onPress={() => { void apply('close'); }} disabled={!can('close')} />}
-          {can('reopen') && <Button kind="secondary" label={t('trip.reopen')} onPress={() => { void apply('reopen'); }} />}
-        </Row>
-        {meta.status === 'settling' && !allSettled && <Body muted style={{ fontSize: 13 }}>{t('trip.closeBlocked')}</Body>}
-      </Card>
-
-      <Card>
-        <H2>{t('export.title')}</H2>
-        <Body muted style={{ fontSize: 13 }}>{t('export.hint')}</Body>
-        <Button kind="secondary" label={t('export.csv')} onPress={() => { void exportCsv(); }} disabled={!hasEntries} />
-        {exported && <Body muted style={{ fontSize: 13 }}>{t('export.done', { filename: exported })}</Body>}
-      </Card>
+      <Body muted style={{ fontSize: 13 }}>{t('settings.scopeHint')}</Body>
 
       <Card>
         <H2>{t('settings.language')}</H2>
@@ -123,7 +44,7 @@ export default function Settings() {
       </Card>
 
       <Card>
-        <H2>{t('auth.signIn')}</H2>
+        <H2>{t('settings.account')}</H2>
         {auth ? (
           <>
             <Body muted>{t('auth.signedInAs', { email: auth.email ?? auth.userId })}</Body>
@@ -133,13 +54,29 @@ export default function Settings() {
         ) : <Button kind="secondary" label={t('auth.signIn')} onPress={() => { router.push('/signin'); }} />}
       </Card>
 
-      {!meta.remote && (
-        <Card>
-          <Button kind="secondary" label={t('settings.resetSample')} onPress={loadSample} />
-          <Button kind="danger" label={t('settings.clear')} onPress={clearAll} />
-        </Card>
+      {/*
+        * Developer affordances, and they must never reach a shipped build (#8).
+        *
+        * The comparison is written out here rather than behind an imported
+        * constant on purpose: Expo inlines `process.env.EXPO_PUBLIC_*` at export
+        * time, so this folds to `false` at this exact site and the minifier drops
+        * the branch. Behind an import it stays in the bundle as dead-but-shipped
+        * code — `pnpm check:no-dev-ui` caught precisely that and fails the build
+        * if the marker below ever turns up in a production export again.
+        *
+        * The flag is set in exactly two places, both test paths: the `e2e` script
+        * and the export step of the CI job that feeds Playwright. For local work:
+        * `EXPO_PUBLIC_E2E=1 pnpm --filter @vst/mobile web`.
+        */}
+      {process.env.EXPO_PUBLIC_E2E === '1' && (
+        <View testID="nolla-dev-tools">
+          <Card>
+            <H2>{t('settings.developer')}</H2>
+            <Button kind="secondary" label={t('settings.resetSample')} onPress={loadSample} />
+            <Button kind="danger" label={t('settings.clear')} onPress={clearAll} />
+          </Card>
+        </View>
       )}
-      {error && <Body style={{ color: th.negative }}>{error}</Body>}
     </Screen>
   );
 }

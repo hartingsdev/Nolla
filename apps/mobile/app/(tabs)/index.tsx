@@ -8,7 +8,7 @@ import { useBalances, useCcy, useLiveEntries, useMeId, useNames, useOffline, use
 import { requestSync, useSyncing } from '../../src/sync/useSync';
 import { useStore } from '../../src/store';
 import { space, useTheme } from '../../src/theme';
-import { Amount, Body, Card, Chip, Divider, H1, H2, Row, Screen } from '../../src/components/ui';
+import { Amount, Body, Button, Card, Chip, Divider, H1, H2, Row, Screen } from '../../src/components/ui';
 
 export default function Overview() {
   const { t, i18n } = useTranslation();
@@ -69,7 +69,10 @@ export default function Overview() {
       )}
       <Card>
         {participants.length === 0 ? (
-          <Body muted>{t('overview.empty')}</Body>
+          <>
+            <Body muted>{t('overview.needPeople')}</Body>
+            <Button label={t('overview.addPeople')} onPress={() => { router.push('/trip/participants'); }} />
+          </>
         ) : mine === null ? (
           <>
             <H2>{t('overview.whoAreYou')}</H2>
@@ -90,7 +93,7 @@ export default function Overview() {
         <Card>
           <Row style={{ justifyContent: 'space-between' }}>
             <H2>{t('overview.balances')}</H2>
-            <Link href="/participants" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('participants.title')}</Body></Pressable></Link>
+            <Link href="/trip/participants" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('participants.title')}</Body></Pressable></Link>
           </Row>
           {participants.map((p, i) => {
             const b = shown.get(p.id as ParticipantId) ?? zeroMoney(ccy);
@@ -132,11 +135,7 @@ export default function Overview() {
       )}
 
       <Card>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <H2>{t('overview.recent')}</H2>
-          <Link href="/trips" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('trips.title')}</Body></Pressable></Link>
-          <Link href="/settings" asChild><Pressable accessibilityRole="button"><Body style={{ color: th.primary }}>{t('settings.title')}</Body></Pressable></Link>
-        </Row>
+        <H2>{t('overview.recent')}</H2>
         {entries.length === 0 ? <Body muted>{t('ledger.empty')}</Body> : entries.slice(0, 5).map((e, i) => (
           <Pressable key={e.id} onPress={() => { router.push({ pathname: '/entry/[id]', params: { id: e.id } }); }}>
             {i > 0 && <Divider />}

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useEntries, useMeId, useParticipants, useTripMeta } from '../src/selectors';
-import { useStore } from '../src/store';
-import { todayLocal, uuidv7 } from '../src/ids';
-import { useApi } from '../src/sync/useSync';
-import { useTheme } from '../src/theme';
-import { ParticipantRow } from '../src/components/ParticipantRow';
-import { Body, Button, Card, Divider, H2, Row, Screen } from '../src/components/ui';
+import { useEntries, useMeId, useParticipants, useTripMeta } from '../../src/selectors';
+import { useStore } from '../../src/store';
+import { todayLocal, uuidv7 } from '../../src/ids';
+import { useApi } from '../../src/sync/useSync';
+import { useTheme } from '../../src/theme';
+import { ParticipantRow } from '../../src/components/ParticipantRow';
+import { Body, Button, Card, Divider, H2, Row, Screen } from '../../src/components/ui';
 
 export default function Participants() {
   const { t } = useTranslation();

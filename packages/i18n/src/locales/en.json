@@ -19,7 +19,9 @@
     "recent": "Recent entries",
     "empty": "No expenses yet. Tap + to add the first one.",
     "add": "Add expense",
-    "addPayment": "Record payment"
+    "addPayment": "Record payment",
+    "addPeople": "Add people",
+    "needPeople": "Add the people you are splitting with — they need no account."
   },
   "person": {
     "owes": "owes {{amount}}",
@@ -164,13 +166,19 @@
     "you": "you",
     "cannotRemove": "Has entries; settle first.",
     "rename": "Rename",
-    "formerly": "Formerly"
+    "formerly": "Formerly",
+    "count_one": "{{count}} participant",
+    "count_other": "{{count}} participants",
+    "none": "Nobody yet — add the people you are splitting with."
   },
   "settings": {
     "title": "Settings",
     "resetSample": "Load sample trip",
     "clear": "Clear all data",
-    "language": "Language"
+    "language": "Language",
+    "scopeHint": "These apply to the app on this device, not to a single trip.",
+    "account": "Account",
+    "developer": "Developer"
   },
   "common": {
     "ok": "OK",
@@ -196,7 +204,16 @@
     "reopen": "Reopen",
     "close": "Close trip",
     "closeBlocked": "Balances are not all zero yet.",
-    "readOnly": "Trip is {{status}} — no changes possible."
+    "readOnly": "Trip is {{status}} — no changes possible.",
+    "settings": "Trip settings",
+    "scopeHint": "These apply to this trip only.",
+    "sharing": "Sharing",
+    "localOnly": "This trip is on this device only. Sharing needs a shared trip and an account.",
+    "delete": "Delete this trip",
+    "deleteHint": "Removes everyone and every entry from this trip on this device. This cannot be undone.",
+    "deleteConfirm": "Delete “{{name}}”? {{count}} entries go with it.",
+    "removeDevice": "Remove from this device",
+    "removeDeviceHint": "The trip stays on the server; open it again from Trips."
   },
   "category": {
     "label": "Category",

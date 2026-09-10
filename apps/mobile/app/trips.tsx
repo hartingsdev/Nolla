@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useRouter } from 'expo-router';
-import { Pressable, TextInput, View } from 'react-native';
+import { Link, Stack, useRouter } from 'expo-router';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { uuidv7 } from '../src/ids';
 import { useApi } from '../src/sync/useSync';
 import { emptyTrip } from '../src/sync/merge';
 import { LOCAL_TRIP_ID, useStore } from '../src/store';
-import { useTheme } from '../src/theme';
+import { space, useTheme } from '../src/theme';
 import { Body, Button, Card, Chip, Divider, H2, Row, Screen } from '../src/components/ui';
 
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'] as const;
@@ -56,6 +56,13 @@ export default function Trips() {
 
   return (
     <Screen>
+      <Stack.Screen options={{ headerRight: () => (
+        <Link href="/settings" asChild>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('settings.title')} style={{ paddingHorizontal: space.lg }}>
+            <Text style={{ color: th.primary, fontSize: 20 }}>{'⚙'}</Text>
+          </Pressable>
+        </Link>
+      ) }} />
       <Card>
         <H2>{t('trips.local')}</H2>
         <Pressable onPress={() => { open(LOCAL_TRIP_ID); }} accessibilityRole="button">

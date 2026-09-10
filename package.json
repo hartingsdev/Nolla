@@ -11,7 +11,8 @@
     "test": "pnpm -r --parallel test",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "dev": "node scripts/dev.mjs",
-    "check:no-floats": "node scripts/check-no-floats.mjs"
+    "check:no-floats": "node scripts/check-no-floats.mjs",
+    "check:no-dev-ui": "node scripts/check-no-dev-ui.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

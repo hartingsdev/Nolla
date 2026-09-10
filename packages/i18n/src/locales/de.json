@@ -19,7 +19,9 @@
     "recent": "Letzte Einträge",
     "empty": "Noch keine Ausgaben. Tippe auf +, um die erste einzutragen.",
     "add": "Ausgabe hinzufügen",
-    "addPayment": "Zahlung erfassen"
+    "addPayment": "Zahlung erfassen",
+    "addPeople": "Leute hinzufügen",
+    "needPeople": "Füge die Leute hinzu, mit denen du teilst — sie brauchen kein Konto."
   },
   "person": {
     "owes": "schuldet {{amount}}",
@@ -164,13 +166,19 @@
     "you": "du",
     "cannotRemove": "Hat Einträge; erst abrechnen.",
     "rename": "Umbenennen",
-    "formerly": "Vorher"
+    "formerly": "Vorher",
+    "count_one": "{{count}} Teilnehmer",
+    "count_other": "{{count}} Teilnehmer",
+    "none": "Noch niemand — füge die Leute hinzu, mit denen du teilst."
   },
   "settings": {
     "title": "Einstellungen",
     "resetSample": "Beispielreise laden",
     "clear": "Alle Daten löschen",
-    "language": "Sprache"
+    "language": "Sprache",
+    "scopeHint": "Gilt für die App auf diesem Gerät, nicht für eine einzelne Reise.",
+    "account": "Konto",
+    "developer": "Entwickler"
   },
   "common": {
     "ok": "OK",
@@ -196,7 +204,16 @@
     "reopen": "Wieder öffnen",
     "close": "Reise schließen",
     "closeBlocked": "Noch nicht alle Salden bei null.",
-    "readOnly": "Reise ist {{status}} — keine Änderungen möglich."
+    "readOnly": "Reise ist {{status}} — keine Änderungen möglich.",
+    "settings": "Reiseeinstellungen",
+    "scopeHint": "Gilt nur für diese Reise.",
+    "sharing": "Teilen",
+    "localOnly": "Diese Reise liegt nur auf diesem Gerät. Zum Teilen braucht es eine geteilte Reise und ein Konto.",
+    "delete": "Diese Reise löschen",
+    "deleteHint": "Entfernt alle Teilnehmer und alle Einträge dieser Reise von diesem Gerät. Das lässt sich nicht rückgängig machen.",
+    "deleteConfirm": "„{{name}}“ löschen? {{count}} Einträge gehen mit.",
+    "removeDevice": "Von diesem Gerät entfernen",
+    "removeDeviceHint": "Die Reise bleibt auf dem Server; unter „Reisen“ kannst du sie wieder öffnen."
   },
   "category": {
     "label": "Kategorie",
