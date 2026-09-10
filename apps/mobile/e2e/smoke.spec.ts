@@ -1,9 +1,23 @@
 import { expect, test } from '@playwright/test';
 import { expectBalancesSumToZero, fresh, loadSample } from './helpers';
 
-test('empty state invites the first expense', async ({ page }) => {
+test('a fresh install asks for people, and the ask leads somewhere (#4, #11)', async ({ page }) => {
   await fresh(page);
-  await expect(page.getByText('No expenses yet. Tap + to add the first one.')).toBeVisible();
+  // The old empty state asked for an expense that could not be saved, because
+  // the form has no payer to offer until somebody exists.
+  await expect(page.getByText('Add the people you are splitting with — they need no account.')).toBeVisible();
+  await page.getByRole('button', { name: 'Add people' }).click();
+  await expect(page).toHaveURL(/\/trip\/participants$/);
+});
+
+test('app-level destinations are not buried in a card header (#6)', async ({ page }) => {
+  await loadSample(page);
+  // "Trips" and "Settings" used to sit in the Recent entries heading row.
+  await expect(page.getByRole('button', { name: 'Trips' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Trip settings' })).toBeVisible();
+  await page.getByRole('button', { name: 'Trip settings' }).click();
+  await expect(page).toHaveURL(/\/trip\/settings$/);
+  await expect(page.getByText('These apply to this trip only.')).toBeVisible();
 });
 
 test('sample trip: headline, balances and trip cost', async ({ page }) => {

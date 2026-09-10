@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e/tsconfig.json",
     "test": "vitest run --passWithNoTests",
     "serve:dist": "node scripts/serve-dist.mjs dist 8787",
-    "e2e": "EXPO_PUBLIC_API_URL=http://localhost:8090 EXPO_PUBLIC_E2E=1 expo export --platform web && playwright test",
+    "e2e": "EXPO_PUBLIC_API_URL=http://localhost:8090 EXPO_PUBLIC_E2E=1 expo export --platform web --clear && playwright test",
     "e2e:only": "playwright test"
   },
   "dependencies": {

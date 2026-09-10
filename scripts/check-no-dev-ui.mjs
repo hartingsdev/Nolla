@@ -1,9 +1,13 @@
 // Fails if developer-only UI survived into a production web bundle (#8).
 //
-// DEV_TOOLS is `process.env.EXPO_PUBLIC_E2E === '1'`, which Expo inlines at
+// The check is `process.env.EXPO_PUBLIC_E2E === '1'`, which Expo inlines at
 // export time, so a production export folds it to false and drops the branch.
 // This asserts that rather than trusting it: CI's check job already exports the
 // web build without the flag, and this greps what came out.
+//
+// Metro caches the inlined value: flipping EXPO_PUBLIC_E2E between two exports
+// without `--clear` silently reuses the previous one. CI is safe because its
+// cache starts cold; locally, export with --clear before believing this check.
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
