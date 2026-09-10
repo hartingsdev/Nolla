@@ -7,9 +7,11 @@ computes a settlement plan.
 
 ## Status
 
-Milestones M0–M9 are done: the app runs on iOS, Android and the web, against a
-local ledger or a shared trip on the API. What is left before a real trip is
-distribution (M10–M11), which needs Apple and Google developer accounts.
+Milestones M0–M9 are done, and v0.2 with them: the app runs on iOS, Android and
+the web, against a local ledger or a shared trip on the API. An installable
+Android build now comes out of CI (see *Try it*), so getting it onto a phone no
+longer waits on anything. Store distribution (M10–M11) still needs Apple and
+Google developer accounts.
 
 - [Requirements & feature plan](docs/requirements.md) — scope, decision log, domain model,
   functional/non-functional requirements, settlement algorithm, release plan,
@@ -28,11 +30,11 @@ billing deferred. Full rationale in §1.3 of the requirements.
 
 ## Next step
 
-Q10 — how v0.1 reaches the group (TestFlight and Play internal testing, or
-sideloaded dev builds) — blocks M10 and needs Apple and Google developer
-accounts. Everything else is v0.2 work: an audit trail per entry (FR-10.2),
-transfer dispute (FR-5.3), and the two narrower adjustment cases noted in the
-requirements.
+The Android build sideloads today, so the next thing is using it: put it on a
+phone, enter a trip the way the group actually would, and see what the app gets
+wrong. Q10 — how v0.1 reaches the *rest* of the group (TestFlight and Play
+internal testing, or sideloaded builds all round) — still blocks M10 and still
+needs the developer accounts.
 
 ## Try it
 
@@ -74,6 +76,11 @@ Console, no Android SDK anywhere:
 2. When it finishes, download the `trip-ledger-apk` artifact **on the phone**,
    unzip it, and open the `.apk`. Android asks once whether this browser or file
    manager may install apps; say yes.
+
+Budget about 25 minutes for the run: the native code is compiled from scratch
+every time, with no Gradle cache carried between runs. The artifact is roughly
+50 MB because the APK carries all four CPU architectures — the Play Store split
+that per device, a sideloaded build cannot.
 
 What the workflow does is what a developer would do by hand: generate the native
 project from `app.json` (`expo prebuild`), then `./gradlew assembleRelease`. The
@@ -155,4 +162,5 @@ displayed balances always sum to zero. CI runs all three on every push.
 - [x] M6 — shared trips in the app: sign-in (magic link), invites, claiming, sync engine with outbox + change feed, conflict notices
 - [x] M9 — receipts (presigned uploads, retention job) and offline-write polish (queued badges, backoff, replay)
 - [x] v0.2 — CSV export (FR-7.8), share and percentage splits (FR-3.5), per-person tip (FR-3.7), adjustments in both shapes (FR-6), audit trail (FR-10.2), transfer dispute (FR-5.3), participant rename with history (FR-1.12)
-- [ ] M10–M11 — distribution (needs Apple/Google developer accounts), the trip
+- [x] Android sideload — `android-apk` workflow: prebuild + `assembleRelease` on CI, APK as an artifact, no account and no local SDK
+- [ ] M10–M11 — store distribution (needs Apple/Google developer accounts), the trip
