@@ -12,10 +12,12 @@ test('a fresh install asks for people, and the ask leads somewhere (#4, #11)', a
 
 test('app-level destinations are not buried in a card header (#6)', async ({ page }) => {
   await loadSample(page);
-  // "Trips" and "Settings" used to sit in the Recent entries heading row.
-  await expect(page.getByRole('button', { name: 'Trips' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Trip settings' })).toBeVisible();
-  await page.getByRole('button', { name: 'Trip settings' }).click();
+  // "Trips" and "Settings" used to sit in the Recent entries heading row; they
+  // are header actions now. Role is `link`, not `button`: expo-router's Link
+  // renders an anchor on web and the anchor's role wins over the Pressable's.
+  await expect(page.getByRole('link', { name: 'Trips' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Trip settings' })).toBeVisible();
+  await page.getByRole('link', { name: 'Trip settings' }).click();
   await expect(page).toHaveURL(/\/trip\/settings$/);
   await expect(page.getByText('These apply to this trip only.')).toBeVisible();
 });
