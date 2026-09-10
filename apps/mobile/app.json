@@ -8,9 +8,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "cloud.hartings.nolla" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "dev.hartings.nolla" },
     "android": {
-      "package": "cloud.hartings.nolla",
+      "package": "dev.hartings.nolla",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
