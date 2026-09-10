@@ -1,9 +1,13 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.7** · Owner: project team · Date: 2026-09-10
+Status: **Draft v1.8** · Owner: project team · Date: 2026-09-10
 
 **Changelog**
 
+- v1.8 — onboarding pulled forward from v0.3 to the next release as FR-1.13, after
+  first use on a real device: a fresh install has no participants, so the empty
+  state asks for an expense that cannot be saved. Setup doubles as the tutorial,
+  and is explicitly barred from being the only route to anything.
 - v1.7 — editorial: the group's existing records are no longer cited as the
   source of anything. §4 states the baseline behaviours in their own right and
   §4.1 the failure modes of tracking costs by hand; the requirements and their
@@ -362,6 +366,7 @@ Priority uses MoSCoW: **M** = must (MVP), **S** = should (v1), **C** = could
 | FR-1.10 | M | **Sign in with Apple** offered wherever Google sign-in is offered, per Apple's equivalent-option rule. |
 | FR-1.11 | S | Placeholder participants (FR-1.3) are promoted to real members by claiming them after sign-in; all their historical shares follow the claim. |
 | FR-1.12 | S | A participant's **display name can be corrected**: by the person themselves (including when they join and claim a placeholder someone else named), or by a trip admin. Every previous name is kept and shown, because in a shared trip a name is how everyone else recognises whose money an entry is — a silent change rewrites the past for them. Names are labels: the ledger references participant ids, so a rename never moves money, and it is allowed whatever the trip's status. |
+| FR-1.13 | M | **First run sets the trip up rather than explaining it.** Three steps — trip name, who is coming (stating that they need no account), which of them you are — leaving a usable trip behind, then offering either a first expense or the sample data. Skippable at any point, landing on a dismissible "finish setup" card and never on an empty screen; repeatable from app settings. It may explain, but must never be the only route to something: every step's outcome stays reachable without it (FR-1.1, FR-1.3, and picking "me"). |
 
 **Acceptance (FR-1.2):** opening the share link on a fresh phone leads to
 sign-in, then to the trip, then to claiming a participant slot — with the whole
@@ -700,8 +705,11 @@ freeze/reopen (FR-8.7), transfer dispute (FR-5.3).
 **v0.3 — "shippable to others"**
 Statistics, payment deep links (FR-5.5), push notifications, comments,
 multi-currency (FR-2.8), instalments (FR-2.10), split presets, plus the public
-launch scaffolding deferred in §1.2: onboarding, empty states, privacy policy,
-support URL, store listing assets, crash reporting. Billing and in-app purchase
+launch scaffolding deferred in §1.2: privacy policy, support URL, store listing
+assets, crash reporting. *Onboarding and empty states were pulled out of this
+list and into the next release (FR-1.13): first use on a real device showed they
+are not launch polish but the difference between an app the author can use and
+one anybody can.* Billing and in-app purchase
 (FR-12.7) only once the gating axis is decided (D13).
 
 **Later / evaluate**
