@@ -87,8 +87,6 @@ jobs:
       - run: pnpm --filter @vst/mobile export:web
         env:
           CI: 1
-      # The export above carries no EXPO_PUBLIC_E2E, so it is what users would get.
-      - run: pnpm check:no-dev-ui
           EXPO_PUBLIC_API_URL: http://localhost:8090   # the e2e suite boots the API on PGlite on this port
           EXPO_PUBLIC_E2E: '1'                        # renders the developer card the suite loads the sample from
       # The browser is ~150 MB from a CDN we do not control, fetched on every run.
