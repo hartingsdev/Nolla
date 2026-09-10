@@ -5,7 +5,7 @@ import { type Participant } from '../store';
 import { formatDate } from '../format';
 import { useApi } from '../sync/useSync';
 import { useStore } from '../store';
-import { useTripMeta } from '../selectors';
+import { useTripMeta, activeTrip } from '../selectors';
 import { space, useTheme } from '../theme';
 import { Body, Chip, Row } from './ui';
 
@@ -39,7 +39,7 @@ export function ParticipantRow({ p, isMe, canRename, right }: Props) {
   // Save is pressed. Watching the queued op means the history reloads exactly once
   // more — when the write has actually landed — instead of polling for it.
   const pendingRename = useStore((s) => {
-    const trip = s.trips[s.activeTripId];
+    const trip = activeTrip(s);
     return trip?.outbox.some((o) => o.kind === 'renameParticipant' && o.participantId === p.id) ?? false;
   });
 

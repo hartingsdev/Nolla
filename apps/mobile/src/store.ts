@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { type TripStatus, type WireEntry } from '@vst/domain';
 import { DEFAULT_API_URL } from './api/client';
+import { uuidv7 } from './ids';
 import { sampleTrip } from './sample';
 import { type Feed } from './api/types';
 import { type OutboxOp, type Participant, type TripMeta, type TripState, ack, applyFeed, conflict, emptyTrip, enqueue, reject } from './sync/merge';
@@ -17,9 +18,14 @@ export type { Participant, TripMeta, TripState } from './sync/merge';
 
 export interface Auth { readonly token: string; readonly userId: string; readonly email: string | null }
 
-interface State {
+export interface State {
   trips: Record<string, TripState>;
-  activeTripId: string;
+  /**
+   * `null` means no trip is open — the state after deleting the one you were in.
+   * Trip-scoped screens redirect to the trip list rather than every selector
+   * learning to cope with a missing trip (#12).
+   */
+  activeTripId: string | null;
   auth: Auth | null;
   apiUrl: string;
   pendingInvite: string | null;
@@ -50,6 +56,8 @@ interface Actions {
   readonly setMe: (id: string | null) => void;
   readonly setStatus: (status: TripStatus) => void;
   readonly setTripMeta: (patch: Partial<Pick<TripMeta, 'name' | 'ccy'>>) => void;
+  /** Adds a local trip and opens it. Returns its id. */
+  readonly createLocalTrip: (name: string) => string;
   readonly loadSample: () => void;
   readonly clearAll: () => void;
   /** Sync engine hooks (SyncStore). */
@@ -58,21 +66,28 @@ interface Actions {
   readonly dismissConflict: (entryId: string) => void;
 }
 
+/**
+ * The id of the local trip that existed before trips could be plural. New local
+ * trips get generated ids; this one is kept so installs that predate #12 do not
+ * lose theirs. It is no longer special in any other way.
+ */
 export const LOCAL_TRIP_ID = 'local';
 const localMeta: TripMeta = { id: LOCAL_TRIP_ID, name: 'My trip', ccy: 'EUR', timezone: 'Europe/Berlin', status: 'open', remote: false };
+const newLocalMeta = (id: string, name: string): TripMeta => ({ ...localMeta, id, name });
 const opId = () => `${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const useStore = create<State & Actions>()(
   persist(
     (set, get) => {
-      const active = () => get().trips[get().activeTripId];
+      const active = () => { const id = get().activeTripId; return id === null ? undefined : get().trips[id]; };
       /** Apply a local change to the active trip; for remote trips also queue it. */
       const change = (local: (t: TripState) => TripState, op?: (t: TripState) => OutboxOp) => set((s) => {
-        const t = s.trips[s.activeTripId];
-        if (!t) return s;
+        const id = s.activeTripId;
+        const t = id === null ? undefined : s.trips[id];
+        if (!t || id === null) return s;
         let next = local(t);
         if (t.meta.remote && op) next = { ...next, outbox: enqueue(next.outbox, op(next)) };
-        return { trips: { ...s.trips, [s.activeTripId]: next } };
+        return { trips: { ...s.trips, [id]: next } };
       });
       return {
         trips: { [LOCAL_TRIP_ID]: emptyTrip(localMeta) },
@@ -89,7 +104,7 @@ export const useStore = create<State & Actions>()(
         setPendingInvite: (pendingInvite) => set({ pendingInvite }),
         setActiveTrip: (activeTripId) => set((s) => (s.trips[activeTripId] ? { activeTripId } : s)),
         upsertTrip: (t) => set((s) => ({ trips: { ...s.trips, [t.meta.id]: { ...(s.trips[t.meta.id] ?? {}), ...t } } })),
-        removeTrip: (id) => set((s) => ({ trips: Object.fromEntries(Object.entries(s.trips).filter(([k]) => k !== id)), activeTripId: s.activeTripId === id ? LOCAL_TRIP_ID : s.activeTripId })),
+        removeTrip: (id) => set((s) => ({ trips: Object.fromEntries(Object.entries(s.trips).filter(([k]) => k !== id)), activeTripId: s.activeTripId === id ? null : s.activeTripId })),
 
         addEntry: (e) => { change((t) => ({ ...t, entries: [...t.entries, e] }), () => ({ opId: opId(), kind: 'create', entry: e })); },
         updateEntry: (e) => { change((t) => ({ ...t, entries: t.entries.map((x) => (x.id === e.id ? e : x)) }), () => ({ opId: opId(), kind: 'update', entry: e })); },
@@ -129,12 +144,20 @@ export const useStore = create<State & Actions>()(
         setMe: (meId) => { change((t) => ({ ...t, meId })); },
         setStatus: (status) => { change((t) => ({ ...t, meta: { ...t.meta, status } })); },
         setTripMeta: (patch) => { change((t) => ({ ...t, meta: { ...t.meta, ...patch } })); },
+        createLocalTrip: (name) => {
+          const id = uuidv7();
+          set((s) => ({ trips: { ...s.trips, [id]: emptyTrip(newLocalMeta(id, name)) }, activeTripId: id }));
+          return id;
+        },
+        /** Developer affordance: a fresh local trip carrying the worked example. */
         loadSample: () => set((s) => {
           const sample = sampleTrip();
-          const t: TripState = { ...emptyTrip({ ...localMeta, name: sample.trip.name, ccy: sample.trip.ccy, status: 'open' }), participants: sample.participants, entries: sample.entries };
-          return { trips: { ...s.trips, [LOCAL_TRIP_ID]: t }, activeTripId: LOCAL_TRIP_ID };
+          const id = uuidv7();
+          const t: TripState = { ...emptyTrip({ ...newLocalMeta(id, sample.trip.name), ccy: sample.trip.ccy }), participants: sample.participants, entries: sample.entries };
+          return { trips: { ...s.trips, [id]: t }, activeTripId: id };
         }),
-        clearAll: () => set((s) => ({ trips: { ...s.trips, [LOCAL_TRIP_ID]: emptyTrip(localMeta) }, activeTripId: LOCAL_TRIP_ID })),
+        /** Developer affordance: wipe the device. No trip is open afterwards. */
+        clearAll: () => set(() => ({ trips: {}, activeTripId: null })),
 
         getTrip: (id) => get().trips[id],
         setTrip: (id, update) => set((s) => { const t = s.trips[id]; return t ? { trips: { ...s.trips, [id]: update(t) } } : s; }),

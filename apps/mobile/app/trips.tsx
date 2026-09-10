@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { uuidv7 } from '../src/ids';
 import { useApi } from '../src/sync/useSync';
 import { emptyTrip } from '../src/sync/merge';
-import { LOCAL_TRIP_ID, useStore } from '../src/store';
+import { useStore } from '../src/store';
 import { space, useTheme } from '../src/theme';
 import { Body, Button, Card, Chip, Divider, H2, Row, Screen } from '../src/components/ui';
 
@@ -53,6 +53,9 @@ export default function Trips() {
   };
   const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: th.border } as const;
   const remoteTrips = Object.values(trips).filter((x) => x.meta.remote);
+  const localTrips = Object.values(trips).filter((x) => !x.meta.remote);
+  const createLocalTrip = useStore((s) => s.createLocalTrip);
+  const [localName, setLocalName] = useState('');
 
   return (
     <Screen>
@@ -65,12 +68,20 @@ export default function Trips() {
       ) }} />
       <Card>
         <H2>{t('trips.local')}</H2>
-        <Pressable onPress={() => { open(LOCAL_TRIP_ID); }} accessibilityRole="button">
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Body>{trips[LOCAL_TRIP_ID]?.meta.name ?? ''}</Body>
-            <Body style={{ color: th.primary }}>{t('trips.open')}</Body>
-          </Row>
-        </Pressable>
+        {localTrips.length === 0 && <Body muted>{t('trips.noLocal')}</Body>}
+        {localTrips.map((x, i) => (
+          <View key={x.meta.id}>
+            {i > 0 && <Divider />}
+            <Pressable onPress={() => { open(x.meta.id); }} accessibilityRole="button">
+              <Row style={{ justifyContent: 'space-between' }}>
+                <Body>{x.meta.name}</Body>
+                <Body style={{ color: th.primary }}>{t('trips.open')}</Body>
+              </Row>
+            </Pressable>
+          </View>
+        ))}
+        <TextInput value={localName} onChangeText={setLocalName} placeholder={t('trips.name')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('trips.newLocal')} />
+        <Button label={t('trips.newLocal')} onPress={() => { const id = createLocalTrip(localName.trim()); setLocalName(''); open(id); }} disabled={!localName.trim()} />
       </Card>
 
       <Card>

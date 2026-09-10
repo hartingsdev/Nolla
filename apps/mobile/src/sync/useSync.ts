@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { ApiClient } from '../api/client';
+import { activeTrip } from '../selectors';
 import { useStore } from '../store';
 import { type SyncOutcome, backoffMs, syncTrip } from './engine';
 
@@ -30,16 +31,16 @@ export function useApi(): ApiClient {
 export function useSync(): { syncNow: () => Promise<SyncOutcome | null>; syncing: boolean } {
   const api = useApi();
   const tripId = useStore((s) => s.activeTripId);
-  const remote = useStore((s) => s.trips[s.activeTripId]?.meta.remote ?? false);
-  const outboxLen = useStore((s) => s.trips[s.activeTripId]?.outbox.length ?? 0);
-  const failedRounds = useStore((s) => s.trips[s.activeTripId]?.failedRounds ?? 0);
+  const remote = useStore((s) => activeTrip(s)?.meta.remote ?? false);
+  const outboxLen = useStore((s) => activeTrip(s)?.outbox.length ?? 0);
+  const failedRounds = useStore((s) => activeTrip(s)?.failedRounds ?? 0);
   const authed = useStore((s) => s.auth !== null);
   const setAuth = useStore((s) => s.setAuth);
   const [syncing, setSyncing] = useState(false);
   const busy = useRef(false);
 
   const syncNow = useCallback(async (): Promise<SyncOutcome | null> => {
-    if (!remote || !authed || busy.current) return null;
+    if (tripId === null || !remote || !authed || busy.current) return null;
     busy.current = true; setSyncing(true); for (const l of syncingListeners) l(true);
     try {
       const store = { get: useStore.getState().getTrip, set: useStore.getState().setTrip };

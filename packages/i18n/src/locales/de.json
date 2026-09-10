@@ -238,7 +238,9 @@
     "joinPlaceholder": "Einladungslink einfügen",
     "signInToShare": "Melde dich an, um geteilte Reisen anzulegen oder beizutreten.",
     "empty": "Noch keine geteilten Reisen.",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "noLocal": "Noch keine Reisen auf diesem Gerät.",
+    "newLocal": "Neue Reise auf diesem Gerät"
   },
   "auth": {
     "signIn": "Anmelden",

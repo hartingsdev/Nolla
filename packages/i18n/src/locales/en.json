@@ -238,7 +238,9 @@
     "joinPlaceholder": "Paste invite link",
     "signInToShare": "Sign in to create or join shared trips.",
     "empty": "No shared trips yet.",
-    "open": "Open"
+    "open": "Open",
+    "noLocal": "No trips on this device yet.",
+    "newLocal": "New trip on this device"
   },
   "auth": {
     "signIn": "Sign in",

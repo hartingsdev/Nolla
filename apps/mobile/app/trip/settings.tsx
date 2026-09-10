@@ -31,7 +31,6 @@ export default function TripSettings() {
   const participants = useParticipants();
   const setTripMeta = useStore((s) => s.setTripMeta);
   const setStatus = useStore((s) => s.setStatus);
-  const clearAll = useStore((s) => s.clearAll);
   const removeTrip = useStore((s) => s.removeTrip);
   const entries = useLiveEntries();
   const hasEntries = entries.length > 0;
@@ -73,11 +72,11 @@ export default function TripSettings() {
     try { const f = csvFile(); await saveCsv(f.filename, f.text); setExported(f.filename); }
     catch (e) { setError(t('export.failed', { message: e instanceof Error ? e.message : String(e) })); }
   };
-  /** Local trips are a single slot today; #12 turns this into removeTrip(meta.id). */
+  /** Deleting the open trip leaves none open; the layout guard lands you on the list (#12). */
   const deleteTrip = () => {
     confirm(t('trip.deleteConfirm', { name: meta.name, count: entries.length }), () => {
-      if (meta.remote) { removeTrip(meta.id); } else { clearAll(); }
-      router.replace('/');
+      removeTrip(meta.id);
+      router.replace('/trips');
     });
   };
   const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: th.border } as const;

@@ -1,6 +1,7 @@
-import { Link, Tabs } from 'expo-router';
+import { Link, Redirect, Tabs } from 'expo-router';
 import { type ColorValue, Pressable, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { activeTrip } from '../../src/selectors';
 import { useStore } from '../../src/store';
 import { space, useTheme } from '../../src/theme';
 
@@ -30,7 +31,12 @@ const label = (text: string) => ({ color }: { color: ColorValue }) => (
 export default function TabsLayout() {
   const t = useTheme();
   const { t: tr } = useTranslation();
-  const tripName = useStore((s) => s.trips[s.activeTripId]?.meta.name ?? '');
+  const tripName = useStore((s) => activeTrip(s)?.meta.name ?? '');
+  const hydrated = useStore((s) => s.hydrated);
+  // No open trip — the state after deleting the one you were in (#12).
+  const missing = useStore((s) => s.activeTripId === null || !s.trips[s.activeTripId]);
+
+  if (hydrated && missing) return <Redirect href="/trips" />;
 
   const headerLeft = () => (
     <Link href="/trips" asChild>

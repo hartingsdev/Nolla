@@ -4,29 +4,36 @@ import {
   roundAll, settle, tripCost, zeroMoney, type Money, type Precise,
 } from '@vst/domain';
 import { pendingEntryIds } from './sync/merge';
-import { type TripState, useStore } from './store';
+import { type State, type TripState, useStore } from './store';
+/**
+ * The open trip, or undefined when none is (#12). Trip-scoped screens are behind
+ * a redirect, so in practice this is only undefined for the moment between
+ * deleting a trip and landing on the list.
+ */
+export const activeTrip = (s: State): TripState | undefined => (s.activeTripId === null ? undefined : s.trips[s.activeTripId]);
+
 
 export function useTrip(): TripState {
-  const t = useStore((s) => s.trips[s.activeTripId]);
+  const t = useStore((s) => activeTrip(s));
   if (!t) throw new Error('active trip missing');
   return t;
 }
-export const useParticipants = () => useStore((s) => s.trips[s.activeTripId]?.participants ?? []);
+export const useParticipants = () => useStore((s) => activeTrip(s)?.participants ?? []);
 /** Explicit choice, else the participant claimed by the signed-in user (the creator, or after an invite). */
 export const useMeId = () => useStore((s) => {
-  const t = s.trips[s.activeTripId];
+  const t = activeTrip(s);
   if (!t) return null;
   return t.meId ?? t.participants.find((p) => s.auth !== null && p.userId === s.auth.userId)?.id ?? null;
 });
-export const useTripMeta = () => useStore((s) => s.trips[s.activeTripId]?.meta);
+export const useTripMeta = () => useStore((s) => activeTrip(s)?.meta);
 
 export function useCcy() {
-  const code = useStore((s) => s.trips[s.activeTripId]?.meta.ccy ?? 'EUR');
+  const code = useStore((s) => activeTrip(s)?.meta.ccy ?? 'EUR');
   return useMemo(() => currency(code), [code]);
 }
 
 export function useEntries(): Entry[] {
-  const wire = useStore((s) => s.trips[s.activeTripId]?.entries);
+  const wire = useStore((s) => activeTrip(s)?.entries);
   return useMemo(() => (wire ?? []).map(entryFromWire), [wire]);
 }
 
@@ -67,7 +74,7 @@ export function useNames(): Map<string, string> {
 
 /** Which writes the trip's status admits right now (FR-8.7). */
 export function useWriteRules() {
-  const status = useStore((s) => s.trips[s.activeTripId]?.meta.status ?? 'open');
+  const status = useStore((s) => activeTrip(s)?.meta.status ?? 'open');
   return { status, canWriteExpense: status === 'open', canWriteTransfer: status !== 'closed', canEdit: status === 'open', readOnly: status === 'closed' };
 }
 
@@ -79,14 +86,14 @@ export function useAllSettled(): boolean {
 
 /** Entry ids with an unsent local write, for the "queued" badge (FR-11.3). */
 export function usePendingEntryIds(): Set<string> {
-  const outbox = useStore((s) => s.trips[s.activeTripId]?.outbox);
+  const outbox = useStore((s) => activeTrip(s)?.outbox);
   return useMemo(() => pendingEntryIds({ outbox: outbox ?? [] } as unknown as TripState), [outbox]);
 }
 
 /** True when the last sync round failed on the network, so writes are piling up locally. */
 export function useOffline(): boolean {
   return useStore((s) => {
-    const t = s.trips[s.activeTripId];
+    const t = activeTrip(s);
     return !!t?.meta.remote && t.failedRounds > 0 && t.outbox.length > 0;
   });
 }
