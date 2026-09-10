@@ -5,40 +5,10 @@ group currently keeps (per-person columns, `an wen?` payer column, hand-built
 debt matrix) with a mobile-first app that splits costs, tracks who paid, and
 computes a settlement plan.
 
-## Status
-
-Milestones M0–M9 are done, and v0.2 with them: the app runs on iOS, Android and
-the web, against a local ledger or a shared trip on the API. An installable
-Android build now comes out of CI (see *Try it*), so getting it onto a phone no
-longer waits on anything. Store distribution (M10–M11) still needs Apple and
-Google developer accounts.
-
-- [Requirements & feature plan](docs/requirements.md) — scope, decision log, domain model,
-  functional/non-functional requirements, settlement algorithm, release plan,
-  open questions.
-- [Architecture plan](docs/architecture.md) — package boundaries, money types,
-  schema, API, identity flows, client design, ADRs, and the v0.1 build order.
-
-## Decisions so far
-
-React Native (Expo) shipping to both app stores plus a web build · accounts
-required up front · multi-tenant schema, single group operated · hosting
-deferred behind portability constraints · EUR only, multi-currency later ·
-two-tier money precision (exact derived values, integer cents for anything
-payable) · English source strings with German shipped · paid tiers planned,
-billing deferred. Full rationale in §1.3 of the requirements.
-
-## Next step
-
-The Android build sideloads today, so the next thing is using it: put it on a
-phone, enter a trip the way the group actually would, and see what the app gets
-wrong. Q10 — how v0.1 reaches the *rest* of the group (TestFlight and Play
-internal testing, or sideloaded builds all round) — still blocks M10 and still
-needs the developer accounts.
-
 ## Try it
 
-Two ways in. The first needs nothing but Node.
+Five ways in, ordered by what you need installed. None of them needs a hosted
+server, a real database, or an account with anyone.
 
 **On this device only** — no account, no backend:
 
@@ -67,38 +37,15 @@ profile, and watch both sides converge.
 with Expo Go. Set `EXPO_PUBLIC_API_URL` to your machine's LAN address if you want
 the phone to reach the dev API rather than `localhost`.
 
-**On an Android phone, as a real installed app** — no Expo account, no Play
-Console, no Android SDK anywhere:
+**As a real installed app on Android** — no Expo account, no Play Console, no
+Android SDK anywhere. Actions → *android-apk* → *Run workflow* (`expo prebuild`
+then `gradlew assembleRelease` on a GitHub runner, ~25 minutes), then download
+the `trip-ledger-apk` artifact **on the phone**, unzip, open the `.apk`.
 
-1. Actions → *android-apk* → *Run workflow*. Leave the API field empty unless a
-   server is already reachable from the phone; the sign-in screen can point the
-   app somewhere else at any time.
-2. When it finishes, download the `trip-ledger-apk` artifact **on the phone**,
-   unzip it, and open the `.apk`. Android asks once whether this browser or file
-   manager may install apps; say yes.
-
-Budget about 25 minutes for the run: the native code is compiled from scratch
-every time, with no Gradle cache carried between runs. The artifact is roughly
-50 MB because the APK carries all four CPU architectures — the Play Store split
-that per device, a sideloaded build cannot.
-
-What the workflow does is what a developer would do by hand: generate the native
-project from `app.json` (`expo prebuild`), then `./gradlew assembleRelease`. The
-native `android/` directory is never committed, so the build always matches the
-managed config.
-
-Two things to know about that APK. It is signed with the *shared debug keystore*
-Expo's template ships, which is fine for installing on your own phone and unfit
-for anything else; when a Play Console keystore replaces it (M10), the phone will
-refuse the update and the sideloaded build has to be uninstalled first. And a
-trip you keep on the device works offline, but a shared trip needs an API the
-phone can reach — a laptop's LAN address (`http://192.168.x.x:8080`) while the
-dev API runs, entered on the sign-in screen.
-
-`apps/mobile/eas.json` holds the profiles for the other route — `preview` builds
-the same internal-distribution APK on Expo's servers, `production` an app bundle
-for the Play Store. Both need an Expo account, so nothing here has run against
-them yet.
+It is signed with the shared debug keystore Expo's template ships: fine for your
+own phone, unfit for anything else, and a Play Console keystore later (M10) will
+force an uninstall before it can replace this build. `apps/mobile/eas.json` holds
+the profiles for the cloud route when there is an Expo account to run them with.
 
 **Without installing anything but Docker:**
 
@@ -116,6 +63,41 @@ is gone with the container), accepts fabricated identity tokens and serves the
 magic links above, so don't expose it. `docker-compose.yml` is the other thing —
 real Postgres, MinIO and Mailpit for development against the production code
 path.
+
+## Status
+
+Feature-complete for what a trip needs, and not yet used on one. Expenses with
+uneven splits, multiple payers, adjustments and refunds; balances and three
+settlement plans; receipts; CSV export; an audit trail per entry; offline writes
+that reconcile when the phone comes back. It runs on iOS, Android and the web,
+against a ledger on the device or a shared trip on the API. An installable
+Android build comes out of CI, so getting it onto a phone waits on nothing.
+
+Milestones M0–M9 and v0.2 are done; store distribution (M10–M11) still needs
+Apple and Google developer accounts. The two documents below track all of it.
+
+- [Requirements & feature plan](docs/requirements.md) — scope, decision log, domain model,
+  functional/non-functional requirements, settlement algorithm, release plan,
+  open questions.
+- [Architecture plan](docs/architecture.md) — package boundaries, money types,
+  schema, API, identity flows, client design, ADRs, and the v0.1 build order.
+
+## Decisions so far
+
+React Native (Expo) shipping to both app stores plus a web build · accounts
+required up front · multi-tenant schema, single group operated · hosting
+deferred behind portability constraints · EUR only, multi-currency later ·
+two-tier money precision (exact derived values, integer cents for anything
+payable) · English source strings with German shipped · paid tiers planned,
+billing deferred. Full rationale in §1.3 of the requirements.
+
+## Next step
+
+The app is on a phone now, which makes UI feedback from real use the queue that
+matters — the screens have been reviewed in a browser, at a desk, by the person
+who wrote them. Q10 — how v0.1 reaches the *rest* of the group (TestFlight and
+Play internal testing, or sideloaded builds all round) — still blocks M10 and
+still needs the developer accounts.
 
 ## Development
 
