@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Trip Ledger",
-    "slug": "trip-ledger",
-    "scheme": "tripledger",
+    "name": "Nolla",
+    "slug": "nolla",
+    "scheme": "nolla",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "cloud.hartings.tripledger" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "cloud.hartings.nolla" },
     "android": {
-      "package": "cloud.hartings.tripledger",
+      "package": "cloud.hartings.nolla",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

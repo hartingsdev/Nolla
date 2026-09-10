@@ -57,7 +57,7 @@ jobs:
       # release below, which is the link the phone actually follows.
       - uses: actions/upload-artifact@v7
         with:
-          name: trip-ledger-apk
+          name: nolla-apk
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk
           retention-days: 30
           if-no-files-found: error
@@ -69,10 +69,10 @@ jobs:
       - name: Publish the APK as a release asset
         working-directory: apps/mobile/android/app/build/outputs/apk/release
         run: |
-          mv app-release.apk trip-ledger.apk
+          mv app-release.apk nolla.apk
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$TAG" trip-ledger.apk \
-            --title 'Trip Ledger — Android sideload build' \
+          gh release create "$TAG" nolla.apk \
+            --title 'Nolla — Android sideload build' \
             --prerelease \
             --target "$GITHUB_SHA" \
             --notes "$NOTES"
@@ -82,7 +82,7 @@ jobs:
           NOTES: |
             Built from `${{ github.sha }}`${{ inputs.api_url && format(', pointed at {0}', inputs.api_url) || '' }}.
 
-            **[Download trip-ledger.apk](https://github.com/${{ github.repository }}/releases/download/android-latest/trip-ledger.apk)** — open this on the phone and tap it. Android asks once whether the browser may install apps.
+            **[Download nolla.apk](https://github.com/${{ github.repository }}/releases/download/android-latest/nolla.apk)** — open this on the phone and tap it. Android asks once whether the browser may install apps.
 
             Signed with the shared debug keystore Expo's template ships: fine for your own device, not something to publish. A Play Console keystore later will force an uninstall before it can replace this build.
 

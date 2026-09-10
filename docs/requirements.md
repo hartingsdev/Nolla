@@ -1,9 +1,17 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.9** · Owner: project team · Date: 2026-09-10
+Status: **Draft v1.10** · Owner: project team · Date: 2026-09-10
 
 **Changelog**
 
+- v1.10 — D18 and the new FR-13: end-to-end encryption, so the operator cannot
+  read trip content rather than merely undertaking not to. Accounts stay and
+  govern access; a per-trip code, never sent to the server, governs readability
+  — which keeps dispute, history and roles authenticated while making content
+  unreadable. The cost is recorded where it falls: FR-9.1 loses its database
+  enforcement on shared trips and gains a check on decrypt, and FR-9.4's
+  server-side cross-check is withdrawn. NFR-6 now says what encryption does not
+  hide instead of overclaiming.
 - v1.9 — D17: the goal is the group's own trip; a product for strangers is deferred
   until after it. Recorded because a competitive comparison found no functional
   advantage to market, which makes parity work (statistics, multi-currency,
@@ -105,6 +113,7 @@ Resolved 2026-09-08. These supersede the open questions in the v1.0 draft.
 | D13 | **Deferred: what the paid tier gates** (Q15) | Owner will decide after a real trip; the storage premise turned out not to hold (note below) | Forces the entitlement model to be *axis-agnostic*: a plan carries a set of named limits, and no limit is special-cased in the domain. Costs a little indirection, buys the freedom to pick the axis later. `receipts.perTrip` and `receipts.bytesPerTrip` stay, but as **abuse guards, not price levers** |
 | D14 | **v0.1 ships through a non-public channel** (Q10) | Whether TestFlight/internal testing or sideloaded dev builds is undecided, but neither needs a public listing | The store listing, screenshots and marketing assets stay out of v0.1 either way. FR-1.9, FR-1.10 and the privacy forms are still built in v0.1, since they gate the eventual listing and are expensive to retrofit |
 | D15 | **Deferred: the specific test-distribution channel** (Q10) | Undecided | Decide before v0.1 ships. TestFlight needs a paid Apple account and light review; free-account sideloading expires every 7 days and needs re-signing per device |
+| D18 | **End-to-end encryption: the operator cannot read trip content** | The owner does not want the ability to read users' data, and does not want to offer self-hosting as the answer. Capability, not policy: a promise not to look is worth less than not being able to | A **trip code** (128 random bits, shown as Crockford base32 so it can be read aloud) is the only thing that decrypts a trip, and never reaches the server. Accounts stay and govern *access* — who may fetch a trip's blobs — while the code governs *readability*, so FR-5.3, FR-10.2 and roles keep an authenticated author and removal takes effect immediately. What the server loses is every check on content: the I1–I5 database triggers, the balances and settlement cross-check endpoints, the nightly invariant job, and server-side name resolution in the history. These move into the client, which verifies on decrypt (FR-9.1). What encryption does **not** hide is routing metadata — trip membership, sequence, timestamps, sizes — and the requirement is written to say so rather than overclaim. Whoever holds the code can read everything that existed while they held it; rotation protects the future, never the past |
 | D17 | **The goal is the group's own trip; being a product for strangers is deferred** | A feature comparison against Splitwise and the FOSS app *Quits* found no functional advantage worth marketing: split types, integer-minor-unit money, largest-remainder rounding, CSV export and offline use are all present in both, and *Quits* is ahead on itemized splits, multi-currency and statistics. The distinctions that remain — a rotating residual cent, per-field audit trail, recipient-only dispute, three explained settlement plans with minimality proven rather than claimed — are craft, not a reason anyone installs an app | Scope is set by *"what breaks on a real trip"*, not by parity: no statistics (FR-7.7), no multi-currency (FR-2.8), no itemized splits (FR-3.9), no work on positioning or store presence beyond what distribution to five phones requires. The naming and icon questions stop being blockers: the Play `applicationId` is permanent, but it need not match a future brand. Revisit after the trip, when there is evidence instead of speculation. If it is ever revisited, the one wedge worth testing is that **only the organiser needs the app** — placeholder participants (FR-1.3) and the account-free local trip already exist and merely need to be the point rather than a detail |
 | D16 | **E-mail and push behind a `Notifier` port** (Q11) | Portability (D3); volume is unknown | v0.1 wires a throwaway implementation (Expo push, any SMTP for magic links). The core depends on the port, never a vendor SDK (NFR-14). Swapping later is one adapter |
 
@@ -473,10 +482,10 @@ an entry whose shares do not sum to its total.
 
 | ID | Priority | Requirement |
 |---|---|---|
-| FR-9.1 | M | Invariants I1–I5 (§5) enforced in the domain layer and asserted by database constraints/tests; violations are impossible to persist, not merely reported. |
+| FR-9.1 | M | Invariants I1–I5 (§5) enforced in the domain layer, so violations cannot be constructed. On a **local trip** they are additionally asserted by database constraints. On an **encrypted shared trip** the server cannot see the values, so every client re-checks them **on decrypt** and marks any entry that fails (D18); AEAD already makes tampering with a stored blob detectable. One central check becomes n independent ones. |
 | FR-9.2 | M | The two-tier precision model of §5.1 is enforced by the type system: `Money` and `Precise` are distinct types, converting `Precise` → `Money` is only possible through the boundary function that applies P4, and binary floats are absent from storage, transport and arithmetic. |
 | FR-9.3 | M | Balances are **derived** from entries and never stored as an editable field. |
-| FR-9.4 | S | A "reconciliation" self-check surfaced in the UI: Σ balances == 0, Σ shares == Σ expenses, evaluated at full `Precise` precision. |
+| FR-9.4 | S | A "reconciliation" self-check surfaced in the UI: Σ balances == 0, Σ shares == Σ expenses, evaluated at full `Precise` precision. Client-side only — the server-side cross-check endpoints are withdrawn by D18, since a server holding ciphertext cannot compute a balance. |
 | FR-9.5 | S | Concurrent edits resolved without silent loss (per-entry versioning; last-writer-wins with a conflict notice). |
 | FR-9.6 | S | Display honesty: where a rounded figure differs from the exact one, the UI must not present the rounded value as exact. Rounded per-share amounts always sum to the displayed total (P4); a settlement residual is attributed to a named member, not hidden. |
 
@@ -485,7 +494,7 @@ an entry whose shares do not sum to its total.
 | ID | Priority | Requirement |
 |---|---|---|
 | FR-10.1 | M | Multiple people edit the same trip; changes appear for others without a manual refresh (poll or push). |
-| FR-10.2 | S | Full audit trail per entry: who created/edited/deleted, when, and what changed. *Shipped for shared trips: `GET /trips/:id/entries/:eid/history` returns every recorded state with its actor, and the entry screen renders the differences. A local-only trip has no server and therefore no trail.* |
+| FR-10.2 | S | Full audit trail per entry: who created/edited/deleted, when, and what changed. *Shipped for shared trips: `GET /trips/:id/entries/:eid/history` returns every recorded state with its actor, and the entry screen renders the differences. A local-only trip has no server and therefore no trail.* Under D18 the recorded states are ciphertext and the actor is an authenticated account id: the trail keeps its evidential value, but the diffing and the name resolution move into the client. |
 | FR-10.3 | S | Trip activity feed. |
 | FR-10.4 | C | Push notification on new expense involving me, and on debt settled. |
 | FR-10.5 | C | Comments/emoji reactions on an entry (resolves "what was this €38.95 again?"). |
@@ -515,6 +524,17 @@ Consequence of D11–D13. The MVP builds the *mechanism*, not the commerce.
 | FR-12.7 | C | Billing: in-app purchase on both stores (required for digital subscriptions — no external payment flow is permitted inside the app), subscription state, receipt validation, paywall UI. Deferred past v0.2 (D12). |
 | FR-12.8 | W | Any paywall, limit enforcement or upgrade prompt in v0.1. |
 
+
+### FR-13 Encryption and keys
+
+| ID | Priority | Requirement |
+|---|---|---|
+| FR-13.1 | M | Trip content — descriptions, reasons, participant names, amounts, shares, payments and receipt bytes — is encrypted on the device before it leaves it, with a per-trip key the server never receives (D18). The server stores opaque blobs plus the routing metadata it needs to sync them. |
+| FR-13.2 | M | The **trip code** is 128 bits of cryptographically random data, shown in Crockford base32 (no I, L, O or U) in hyphenated groups so it can be read aloud over the phone. Decoding is deliberately forgiving: case-insensitive, hyphens and spaces ignored, I and L accepted for 1 and O for 0. |
+| FR-13.3 | M | One artefact serves three purposes and the UI must say so: the code is the **invitation**, the way onto a **second device**, and the **only means of recovery**. Losing it loses the trip, and no operator action can undo that — this is stated when the code is first shown, not buried in help. |
+| FR-13.4 | M | Encryption is authenticated (AEAD), the envelope is versioned, and the associated data binds a ciphertext to its record so the server cannot move a blob to another entry or rewrite its concurrency metadata undetected. |
+| FR-13.5 | S | Sign-in e-mail addresses are not retained: the address is used to send the magic link and only a hash is stored, so the database holds no address list (D18). |
+| FR-13.6 | S | Rotating a trip's code re-keys everything from that point on. Past entries stay readable to anyone who held the previous code; the UI says this plainly rather than implying revocation is retroactive. |
 ---
 
 ## 7. Settlement algorithm specification
@@ -581,7 +601,7 @@ applying the plan drives every balance to exactly zero.
 | NFR-3 | Scale | **Multi-tenant schema from day one** (D5): no hardcoded participants, no single-group assumptions. Design target 20 participants and 5,000 entries per trip; correctness must hold to 10,000 trips without a schema change, though only this group's trip is operated at launch. |
 | NFR-4 | Availability | Best-effort hosting; offline read (FR-11.1) means an outage never blocks the trip. |
 | NFR-5 | Security | Trip data readable only by members; share links carry a high-entropy token, are revocable, and expire; all traffic over TLS. |
-| NFR-6 | Privacy / GDPR | Personal data limited to display name + e-mail; export and delete-my-data supported (FR-1.9); receipts in a private bucket behind signed, expiring URLs; EU hosting. Retention: 12 months after a trip closes by default, configurable per trip, enforced by FR-12.6 once it ships. |
+| NFR-6 | Privacy / GDPR | **The operator cannot read trip content** (D18, FR-13): it is encrypted on the device under a key the server never sees, receipts included. What remains visible is routing metadata — which account belongs to which trip, sequence numbers, timestamps and sizes — and the claim is worded as *no content, only delivery data*, never as "we see nothing". E-mail addresses are hashed after the magic link is sent (FR-13.5). Export and delete-my-data supported (FR-1.9); EU hosting. Retention: 12 months after a trip closes by default, configurable per trip, enforced by FR-12.6. |
 | NFR-7 | Data integrity | Nightly backups, point-in-time restore; soft deletes; append-only audit log. |
 | NFR-8 | i18n / l10n | **English source strings, German shipped from v0.1** (D10). No user-facing string hardcoded in a component; all text extracted from the first commit. Locale-aware number and date formatting (`€1.234,56` vs `€1,234.56`); currency symbol per trip. |
 | NFR-9 | Accessibility | WCAG 2.1 AA: don't encode meaning in colour alone (a colour-coded "paid" marker needs an icon or label equivalent), touch targets ≥ 44 px, screen-reader labels. |

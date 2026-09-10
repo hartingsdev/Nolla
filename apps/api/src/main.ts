@@ -32,7 +32,7 @@ const clock = systemClock;
 const sessions = sessionService(conn.db, clock);
 const verifier = new OidcVerifier(defaultProviderConfigs({ appleAudiences: list(env('APPLE_AUDIENCES', '')), googleAudiences: list(env('GOOGLE_AUDIENCES', '')) }), () => clock.nowMs());
 const smtp = process.env.SMTP_URL;
-const notifier = smtp ? smtpNotifier(smtp, env('MAIL_FROM', 'Trip Ledger <no-reply@example.com>')) : new RecordingNotifier();
+const notifier = smtp ? smtpNotifier(smtp, env('MAIL_FROM', 'Nolla <no-reply@example.com>')) : new RecordingNotifier();
 const limiter = new MemoryRateLimiter(10, 60_000);
 // Receipts go to any S3-compatible bucket when configured; otherwise the API signs and serves
 // them itself, which is fine for a single-instance deployment (architecture.md §6.5).

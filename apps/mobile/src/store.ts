@@ -142,6 +142,8 @@ export const useStore = create<State & Actions>()(
       };
     },
     {
+      // Deliberately not renamed with the app (Nolla): this key addresses data
+      // already on people's devices, and changing it would orphan their trips.
       name: 'trip-ledger:v1',
       version: 3,
       migrate: (persisted, version) => {

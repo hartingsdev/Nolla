@@ -1,4 +1,4 @@
-# Trip Ledger
+# Nolla
 
 Five people go on holiday. One books the house, another keeps buying the
 groceries, a third fills up the car twice. Someone skips the theme park. There
@@ -10,7 +10,7 @@ pays for four, someone was not there that day, a deposit comes back a week
 later. Keep a running tally by hand and it holds until the first correction;
 after that you are reconciling instead of packing.
 
-Trip Ledger does that job on a phone. Enter what was spent and who it was for;
+Nolla does that job on a phone. Enter what was spent and who it was for;
 it keeps the balances, and when the trip is over it tells you the shortest set
 of payments that clears everything.
 
@@ -73,7 +73,7 @@ test asserts that on every build against what is actually on screen.
 
 **On an Android phone** — this is a real installed app, not a web page:
 
-<https://github.com/hartingsdev/claude-test/releases/download/android-latest/trip-ledger.apk>
+<https://github.com/hartingsdev/claude-test/releases/download/android-latest/nolla.apk>
 
 Open that on the phone and tap it. Android asks once whether the browser may
 install apps; say yes. Settings → *Load sample trip* fills it with a worked
@@ -90,7 +90,7 @@ allows Play Store installs only, and no per-app exception talks it out of that �
 the signing key is irrelevant, since it is the source that is blocked. Installing
 over `adb` from a computer can still work, because that path does not go through
 the package installer: enable USB debugging on the phone and run `adb install
-trip-ledger.apk`. `INSTALL_FAILED_USER_RESTRICTED` means the policy covers `adb`
+nolla.apk`. `INSTALL_FAILED_USER_RESTRICTED` means the policy covers `adb`
 as well, and the only remaining way onto that device is the Play Store (M10).
 
 iPhones need an Apple developer account, which is the next open question.
