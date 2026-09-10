@@ -1,9 +1,11 @@
 # Vacation Spending Tracker — Requirements
 
-Status: **Draft v1.5** · Owner: project team · Date: 2026-09-08
+Status: **Draft v1.6** · Owner: project team · Date: 2026-09-10
 
 **Changelog**
 
+- v1.6 — Q11b split: the mail half is a credential needed before v0.1 ships
+  (Q11c), not a v0.3 provider choice; only push stays deferred.
 - v1.5 — P4 tightened to truncate-then-largest-remainder after a UI test
   surfaced a phantom one-cent transfer following full settlement.
 - v1.4 — exact settlement search raised to n ≤ 16 with the O(2ⁿ·n) DP
@@ -646,6 +648,10 @@ FR-12.1–12.2, FR-12.4, NFR-8, NFR-11, NFR-13–15.
 rules P1–P7; (b) the five of you run a whole trip in it without opening a
 spreadsheet.
 
+*Also needed before v0.1 ships:* SMTP credentials for the magic link (Q11c).
+Without them nobody outside this machine can sign in — the dev API's
+`/dev/magic-links` is a local convenience, not a delivery channel.
+
 *Distribution note:* v0.1 needs no public store listing (D14). The channel —
 TestFlight plus Play internal testing, or sideloaded dev builds — is still open
 (D15) and must be settled before v0.1 ships; TestFlight needs a paid Apple
@@ -682,14 +688,16 @@ Receipt OCR, itemized splits, sub-group presets.
 
 All questions raised in the v1.0 and v1.1 drafts are now either answered or
 consciously deferred; §1.3 records both. Nothing here blocks *starting* the MVP.
-One item, Q10, blocks *shipping* it.
+Two items block *shipping* it: Q10 (how it reaches the group) and Q11c (the
+credentials that let anyone sign in).
 
 | # | Question | Impact | Proposed default | State |
 |---|---|---|---|---|
 | Q12b | When does the purge job actually ship? | Storage cost grows until it does | v0.2 | Deferred (D11) |
 | Q15 | What does the paid tier gate — retention, storage volume, trip count? | Pricing, and eventually the limit checks | Retention or storage volume, since those track real cost | **Open** (D13) |
 | Q10 | TestFlight/internal testing, or sideloaded dev builds, for v0.1? | How your group installs it | TestFlight + Play internal | **Open** (D15), needed before v0.1 ships |
-| Q11b | Which providers, once volume is known? | Cost, deliverability | Decide at v0.3 | Deferred (D16) |
+| Q11c | **Mail**: which SMTP credentials for the magic link? | Nobody signs in without it | Any transactional provider's free tier; five people send a handful of links | **Open, needed before v0.1 ships** — not an architecture choice: the `Notifier` port has an SMTP adapter (nodemailer) and `main.ts` takes any `SMTP_URL`, falling back to a recording notifier without one |
+| Q11b | **Push**: which provider, once volume is known? | Cost, deliverability | Expo push; decide at v0.3 | Deferred (D16). No adapter yet; FR-5.3's "the recipient is notified" waits on this and surfaces on the next sync until then |
 | Q13b | Price point and free-tier shape, if it goes paid? | Revenue, IAP maths at 15–30% | Not before a real trip has run | Deferred (D12) |
 
 Answered questions Q1–Q9, Q11, Q12, Q14 are recorded in §1.3.
