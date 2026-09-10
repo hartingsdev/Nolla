@@ -4,7 +4,9 @@ Status: **Draft v1.6** · Owner: project team · Date: 2026-09-10
 
 **Changelog**
 
-- v1.6 — Q11b split: the mail half is a credential needed before v0.1 ships
+- v1.6 — cost note added to §1.3: storage is not the cost driver, which removes
+  the stated rationale for gating on it (D11, D13); Q15 restated as deliberately
+  open until after the first real trip. Q11b split: the mail half is a credential needed before v0.1 ships
   (Q11c), not a v0.3 provider choice; only push stays deferred.
 - v1.5 — P4 tightened to truncate-then-largest-remainder after a UI test
   surfaced a phantom one-cent transfer following full settlement.
@@ -85,9 +87,9 @@ Resolved 2026-09-08. These supersede the open questions in the v1.0 draft.
 | D8 | **Two-tier money precision** — high-precision derived values, integer minor units for anything payable | Rounding per expense lets one member absorb the odd cent repeatedly; keeping shares exact removes that drift entirely | Shares and balances are exact to 8 decimal places; rounding happens at exactly two boundaries, display and settlement (§5.1). Replaces the earlier "integer cents everywhere" rule |
 | D9 | **Both stores at launch** (Q9) | Expo builds both from one source; the group is mixed iOS/Android, so shipping one first excludes friends from the trip the app was built for | Two developer accounts, two review queues, two listings. Development effort roughly unchanged |
 | D10 | **English source strings, German shipped from v0.1** (Q14) | The group is German-speaking, but a product needs an English source; retrofitting i18n means extracting every hardcoded string | i18n plumbing and one translation pass in v0.1 (~1 day). Locale-aware formatting regardless (NFR-8) |
-| D11 | **Receipt retention configurable per trip, default 12 months; purge job deferred to v0.2** (Q12) | Storage is the real cost driver, so retention is a per-trip lever — but the deletion job is not MVP-critical | The *metadata* is mandatory from day one: a retention setting on every trip and `uploaded_at` on every receipt, so the purge job ships later with no backfill (FR-12.4). Storage grows unbounded until it does — accepted, and tracked as a risk |
-| D12 | **Paid tiers planned; billing deferred** (Q13) | The owner intends to charge, most likely for storage, but demand is unproven | v0.1 builds the entitlement model only: a plan on each account, every limit check routed through one service (FR-12.1–12.3). No billing, no in-app purchase, no paywall UI. Apple and Google require digital subscriptions to go through IAP at a 15–30% cut — that shapes pricing whenever it happens, and is why no Stripe-style flow can live in the app |
-| D13 | **Deferred: what the paid tier gates** (Q15) | Owner will decide later | Forces the entitlement model to be *axis-agnostic*: a plan carries a set of named limits, and no limit is special-cased in the domain. Costs a little indirection, buys the freedom to pick the axis later |
+| D11 | **Receipt retention configurable per trip, default 12 months; purge job deferred to v0.2** (Q12) | ~~Storage is the real cost driver~~ — see the note below; retention is a per-trip lever either way | The *metadata* is mandatory from day one: a retention setting on every trip and `uploaded_at` on every receipt, so the purge job ships later with no backfill (FR-12.4). **The purge job shipped in v0.2**, so the unbounded-growth risk this decision accepted is closed |
+| D12 | **Paid tiers planned; billing deferred** (Q13) | The owner intends to recover running costs, ~~most likely for storage~~ (see the cost note in §1.3), but demand is unproven | v0.1 builds the entitlement model only: a plan on each account, every limit check routed through one service (FR-12.1–12.3). No billing, no in-app purchase, no paywall UI. Apple and Google require digital subscriptions to go through IAP at a 15–30% cut — that shapes pricing whenever it happens, and is why no Stripe-style flow can live in the app |
+| D13 | **Deferred: what the paid tier gates** (Q15) | Owner will decide after a real trip; the storage premise turned out not to hold (note below) | Forces the entitlement model to be *axis-agnostic*: a plan carries a set of named limits, and no limit is special-cased in the domain. Costs a little indirection, buys the freedom to pick the axis later. `receipts.perTrip` and `receipts.bytesPerTrip` stay, but as **abuse guards, not price levers** |
 | D14 | **v0.1 ships through a non-public channel** (Q10) | Whether TestFlight/internal testing or sideloaded dev builds is undecided, but neither needs a public listing | The store listing, screenshots and marketing assets stay out of v0.1 either way. FR-1.9, FR-1.10 and the privacy forms are still built in v0.1, since they gate the eventual listing and are expensive to retrofit |
 | D15 | **Deferred: the specific test-distribution channel** (Q10) | Undecided | Decide before v0.1 ships. TestFlight needs a paid Apple account and light review; free-account sideloading expires every 7 days and needs re-signing per device |
 | D16 | **E-mail and push behind a `Notifier` port** (Q11) | Portability (D3); volume is unknown | v0.1 wires a throwaway implementation (Expo push, any SMTP for magic links). The core depends on the port, never a vendor SDK (NFR-14). Swapping later is one adapter |
@@ -99,6 +101,25 @@ by trip — no cross-user queries, no feed, no global joins — so the path is
 vertical Postgres → read replicas → partition by `trip_id`, and sharding stays
 theoretical at this size. The cost driver at scale is receipt images and push,
 not ledger rows.
+
+> **Note on cost, added 2026-09-10 (v1.6).** D11 and D12 both assume storage is
+> the cost driver. The numbers do not support it. A receipt is a JPEG at quality
+> 0.6, capped at 8 MiB (`RECEIPT_MAX_BYTES`); realistically 300–500 KB. A week
+> with five people and a receipt on half of ~40 expenses is **~8 MB per trip**,
+> kept 12 months — roughly **0.2 cents a year** at object-storage prices. The
+> abuse case, 8 MiB on every entry, reaches ~320 MB and about eight cents.
+>
+> What actually costs money is **fixed, not marginal**: the API host, the
+> database, and the Apple Developer Program at 99 USD a year. Those are paid
+> whether there is one group or five hundred.
+>
+> Two consequences. Gating on storage volume or retention would restrict what is
+> nearly free, degrading receipts — the feature that makes the app pleasant — to
+> protect nothing. And the cheapest route to covering costs is a smaller fixed
+> floor (one small host, Android first) rather than any pricing scheme.
+>
+> Prices are estimates from public list rates, not quotes; the order of magnitude
+> is what matters here.
 
 ## 2. Stakeholders & personas
 
@@ -694,7 +715,7 @@ credentials that let anyone sign in).
 | # | Question | Impact | Proposed default | State |
 |---|---|---|---|---|
 | Q12b | When does the purge job actually ship? | Storage cost grows until it does | v0.2 | Deferred (D11) |
-| Q15 | What does the paid tier gate — retention, storage volume, trip count? | Pricing, and eventually the limit checks | Retention or storage volume, since those track real cost | **Open** (D13) |
+| Q15 | What does the paid tier gate — and in what shape? | Pricing, and eventually the limit checks | None yet. ~~Retention or storage volume~~ — the cost note in §1.3 removes that rationale. A per-trip unlock was considered and rejected: it charges whoever organises the trip, which taxes the most engaged member | **Open, deliberately — revisit after the first real trip (G1).** Nothing in the code presumes an answer: one unlimited plan, no paywall, no IAP. Deciding early would be a guess about a product that has no users yet |
 | Q10 | TestFlight/internal testing, or sideloaded dev builds, for v0.1? | How your group installs it | TestFlight + Play internal | **Open** (D15), needed before v0.1 ships |
 | Q11c | **Mail**: which SMTP credentials for the magic link? | Nobody signs in without it | Any transactional provider's free tier; five people send a handful of links | **Open, needed before v0.1 ships** — not an architecture choice: the `Notifier` port has an SMTP adapter (nodemailer) and `main.ts` takes any `SMTP_URL`, falling back to a recording notifier without one |
 | Q11b | **Push**: which provider, once volume is known? | Cost, deliverability | Expo push; decide at v0.3 | Deferred (D16). No adapter yet; FR-5.3's "the recipient is notified" waits on this and surfaces on the next sync until then |
@@ -716,7 +737,7 @@ Answered questions Q1–Q9, Q11, Q12, Q14 are recorded in §1.3.
 | Receipt storage cost/privacy | Cost, GDPR | Client-side compression, retention limit (Q12), signed URLs |
 | **Product ambition (D5) inflates the MVP** | Never ships — the doc's original top risk, now likelier | D5 is a schema and structure commitment only; every product-facing feature stays behind the §1.2 line until a real trip has run |
 | **Deferred hosting (D3) leaks vendor coupling into the core** | Portability lost silently | NFR-14 enforced by a lint rule banning vendor imports in the domain package |
-| **Receipt storage grows unbounded until the purge job ships (D11)** | Cost, and a weaker GDPR position in the meantime | Retention metadata captured from day one so the job is a pure addition; client-side compression from v0.1; watch the storage bill and pull FR-12.6 forward if it moves |
+| ~~Receipt storage grows unbounded until the purge job ships (D11)~~ **Closed in v0.2** | Cost, and a weaker GDPR position in the meantime | The purge job shipped (FR-12.6) and runs against retention metadata captured from day one. The cost note in §1.3 also shows the exposure was small: single-digit MB per trip |
 | **Entitlement model built before the gating axis is known (D13)** | Over-abstraction — indirection serving a limit that never arrives | Keep it to a plan → named limits map and one service; no paywall, no limit enforcement, no UI until D13 resolves |
 | **IAP takes 15–30% of any subscription** | Undermines a storage-cost-recovery model | Know it before pricing (NFR-15); the margin has to clear both the store cut and the storage bill |
 | **Two review queues (D9) double the release friction** | Slower fixes once public | Over-the-air JS updates for non-native changes; the web build as an always-current escape hatch |
