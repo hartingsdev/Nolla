@@ -548,6 +548,39 @@ stays stateless. The receipt purge job (FR-12.6, v0.2) uses the same mechanism.
 
 ## 7. Client (Expo)
 
+### 7.0 Navigation tree
+
+Two levels, and the mechanism that reaches a node says which level it is on
+(D19). The root is the trip list: the app holds trips, you open one.
+
+```
+App
+├── Trips (list)          the landing page · new trip · enter a code · later: archive
+├── App settings          ⚙ in the list's header — language, account, privacy, support
+├── First-run setup       a flow, not a destination (FR-1.13)
+└── ONE TRIP              push; back leaves the trip
+    ├── Overview          tab · carries the banners: sync, status, retention (FR-12.5)
+    ├── Entries           tab · expenses, payments, adjustments · filters incl. "has a receipt"
+    ├── Settling up       tab · plans, matrix, and the close-out (FR-8.7)
+    ├── ＋ Entry           button → modal
+    ├── Entry detail      push from the list · receipts and history live inside it
+    ├── Person detail     push from a balance row
+    └── Trip settings     ⚙ in the trip's header — configuration only
+        ├── Participants
+        ├── Trip code     (FR-13: invitation, second device, recovery)
+        └── name · currency · dates · export · delete
+
+Doors from outside: invite link (`i/[token]`), magic link (`auth/email`).
+```
+
+**The rules this encodes.** The tab bar holds only views of the open trip, never
+anything app-level. The gear is configuration of the level you are standing on,
+and nothing else — content never hides behind it, which is why receipts are a
+filter in Entries rather than a screen of their own. Going back leaves the trip;
+there is no separate "leave" affordance. A modal is for work you either finish
+or abandon. Doors from outside land on their target directly and must work with
+the app cold and no trip open.
+
 - **Routing:** `expo-router` — file-based, and the same routes serve deep links,
   universal links and the web build.
 - **Server state:** TanStack Query with a persister into SQLite
