@@ -76,11 +76,16 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   });
   /** The rule this entry was saved with, when it recorded one (FR-3.5). */
   const savedRule = initial?.type === 'expense' ? initial.split?.rule : undefined;
-  /** Per-person tip carved out of the amount (FR-3.7). */
-  const [tipRaw, setTipRaw] = useState(() => {
-    const first = initial?.type === 'expense' ? initial.split?.surcharges?.[0] : undefined;
-    return first ? plain(first.amount) : '';
-  });
+  /**
+   * One tip for the table, not per person (FR-3.7). What gets stored is always
+   * a total that already contains the tip — the domain carves surcharges out of
+   * the entry total — so "on top" is an input convenience only, and reopening a
+   * saved entry always shows it as included.
+   */
+  const savedTip = initial?.type === 'expense' && initial.split?.surcharges?.length
+    ? M.sum(initial.split.surcharges.map((x) => x.amount), ccy) : null;
+  const [tipRaw, setTipRaw] = useState(() => (savedTip ? plain(savedTip) : ''));
+  const [tipOnTop, setTipOnTop] = useState(false);
   const [weights, setWeights] = useState<Record<string, string>>(() =>
     savedRule?.kind === 'weights' ? Object.fromEntries(Object.entries(savedRule.weights).map(([id, w]) => [id, w.toString()])) : {});
   const [percents, setPercents] = useState<Record<string, string>>(() =>
@@ -90,7 +95,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const [to, setTo] = useState<string | null>(initial && initial.type !== 'expense' ? initial.shares[0]?.participantId ?? null : null);
   const [error, setError] = useState<string | null>(null);
 
-  const amount: Money | null = (() => {
+  const typed: Money | null = (() => {
     const n = normalizeAmountInput(amountRaw);
     if (n === null) return null;
     try { const m = M.abs(moneyFromString(n, ccy)); return kind === 'expense' && refund ? M.neg(m) : m; } catch { return null; }
@@ -102,11 +107,21 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   // where they carry a slice of their own correction is just an expense.
   const selected = participants.filter((p) => among.has(p.id) && !(groupShape && p.id === from));
   const exactAmounts = selected.map((p) => parse(exact[p.id]));
-  // The tip is part of what was paid, so it comes off the top and the rest is split by the rule.
-  const tip = refund ? zeroMoney(ccy) : parse(tipRaw);
-  const surcharges: Surcharge[] = M.isZero(tip) ? [] : selected.map((p) => ({ participantId: p.id as ParticipantId, amount: tip }));
-  const tipTotal = M.sum(surcharges.map((x) => x.amount), ccy);
-  const tipTooBig = amount !== null && M.cmp(tipTotal, M.abs(amount)) > 0;
+  // The tip comes off the top and the rest is split by the rule — that is the
+  // point of a surcharge, since the rest may go by weights, percent or exact.
+  const tipTotal = refund || kind !== 'expense' ? zeroMoney(ccy) : parse(tipRaw);
+  /** The table's tip, divided equally. `roundAll` decides who absorbs the odd cent. */
+  const tipSurcharges = (seed: string): Surcharge[] => {
+    if (M.isZero(tipTotal) || selected.length === 0) return [];
+    const ids = selected.map((p) => p.id as ParticipantId);
+    const parts = roundAll(allocate(tipTotal, { kind: 'equal', among: ids }, { seed }).map((x) => x.amount), tipTotal, seed);
+    return ids.map((participantId, i) => ({ participantId, amount: parts[i] ?? zeroMoney(ccy) }));
+  };
+  const surcharges = tipSurcharges('preview');
+  /** On top: what was typed is the bill, and the entry's total is bill + tip. */
+  const amount: Money | null = typed === null ? null : (tipOnTop ? M.add(typed, tipTotal) : typed);
+  // Only meaningful when the tip is said to be inside the amount.
+  const tipTooBig = !tipOnTop && typed !== null && M.cmp(tipTotal, M.abs(typed)) > 0;
   const shareResidual = amount && kind === 'expense' && mode === 'exact' ? exactResidual(amount, exactAmounts, surcharges) : null;
   const multiPayer = payers.length > 1;
   const payerResidual = amount && kind === 'expense' && multiPayer
@@ -202,9 +217,9 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         if (tipTooBig) { setError(t('entry.invalid.tip')); return; }
         entry = {
           id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments,
-          shares: allocate(amount, rule, { seed: id, surcharges }),
+          shares: allocate(amount, rule, { seed: id, surcharges: tipSurcharges(id) }),
           // Kept so reopening restores the split rather than guessing at it (FR-3.5).
-          split: { rule, ...(surcharges.length ? { surcharges } : {}) },
+          split: { rule, ...(surcharges.length ? { surcharges: tipSurcharges(id) } : {}) },
           createdAt, deleted: false, ...(category ? { category } : {}),
         };
       }
@@ -322,13 +337,23 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
             <H2>{groupShape ? t('entry.adjAmongGroup') : t('entry.splitAmong')}</H2>
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={among.has(p.id)} onPress={() => { toggleAmong(p.id); }} />)}</Row>
             {!refund && kind === 'expense' && (
-              <Row style={{ justifyContent: 'space-between' }}>
-                <Body style={{ flex: 1 }}>{t('entry.tipPerPerson')}</Body>
-                <TextInput value={tipRaw} onChangeText={setTipRaw} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
-                  style={[inputStyle, { width: 120, textAlign: 'right' }]} accessibilityLabel={t('entry.tipPerPerson')} />
-              </Row>
+              <>
+                <Row style={{ justifyContent: 'space-between' }}>
+                  <Body style={{ flex: 1 }}>{t('entry.tip')}</Body>
+                  <TextInput value={tipRaw} onChangeText={setTipRaw} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
+                    style={[inputStyle, { width: 120, textAlign: 'right' }]} accessibilityLabel={t('entry.tip')} />
+                </Row>
+                {!M.isZero(tipTotal) && (
+                  <Row>
+                    <Chip label={t('entry.tipIncluded')} selected={!tipOnTop} onPress={() => { setTipOnTop(false); }} />
+                    <Chip label={t('entry.tipOnTop')} selected={tipOnTop} onPress={() => { setTipOnTop(true); }} />
+                  </Row>
+                )}
+              </>
             )}
-            {!M.isZero(tipTotal) && !tipTooBig && <Body muted style={{ fontSize: 13 }}>{t('entry.tipTotal', { amount: formatMoney(tipTotal, locale) })}</Body>}
+            {!M.isZero(tipTotal) && !tipTooBig && amount !== null && (
+              <Body muted style={{ fontSize: 13 }}>{t('entry.tipNote', { tip: formatMoney(tipTotal, locale), total: formatMoney(amount, locale) })}</Body>
+            )}
             {tipTooBig && <Body style={{ color: th.negative }}>{t('entry.invalid.tip')}</Body>}
             <Row>
               <Chip label={t('entry.split.equal')} selected={mode === 'equal'} onPress={() => { setMode('equal'); }} />

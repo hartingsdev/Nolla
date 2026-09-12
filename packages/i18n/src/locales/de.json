@@ -45,8 +45,6 @@
     "descriptionPlaceholder": "z. B. Einkauf, Tanken, Abendessen",
     "paidBy": "Bezahlt von",
     "splitAmong": "Aufteilen auf",
-    "tipPerPerson": "Trinkgeld p. P.",
-    "tipTotal": "{{amount}} des Betrags ist Trinkgeld und wird vorab verteilt.",
     "split": {
       "equal": "Gleich",
       "exact": "Genaue Beträge",
@@ -115,7 +113,11 @@
     "markSharePaid": "Meinen Anteil als bezahlt markieren",
     "markPaidFor": "Bezahlt für {{name}}",
     "sharePaid": "bezahlt",
-    "sharePaymentDesc": "Anteil an {{description}}"
+    "sharePaymentDesc": "Anteil an {{description}}",
+    "tip": "Trinkgeld",
+    "tipIncluded": "Im Betrag enthalten",
+    "tipOnTop": "Zusätzlich",
+    "tipNote": "Davon {{tip}} Trinkgeld, zu gleichen Teilen vor dem Rest. Eintrag gesamt {{total}}."
   },
   "ledger": {
     "empty": "Noch nichts erfasst.",

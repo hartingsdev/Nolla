@@ -130,14 +130,14 @@ test('percentages that do not divide evenly still add up to exactly 100%', async
   await expectBalancesSumToZero(page);
 });
 
-test('a per-person tip comes off the top and lands on everyone in the split (FR-3.7)', async ({ page }) => {
+test('one tip for the table comes off the top and lands on everyone in the split (FR-3.7)', async ({ page }) => {
   await page.goto('/entry/new');
   await page.getByLabel('Amount').first().fill('120');
   await page.getByLabel('Description').first().fill('Abendessen');
   await setPayer(page, 'Marc');
-  await page.getByLabel('Tip per person', { exact: true }).fill('4');
-  // €20 of the €120 is tip; the remaining €100 splits five ways, so €24 each.
-  await expect(page.getByText('€20.00 of the amount is tip, split before the rest.')).toBeVisible();
+  await page.getByLabel('Tip', { exact: true }).fill('20');
+  // The €120 already contains €20 of tip; the remaining €100 splits five ways.
+  await expect(page.getByText('€20.00 of it is tip, split equally before the rest. Entry total €120.00.')).toBeVisible();
   await expect(page.getByText('€24.00 per person')).toBeVisible();
   await page.getByRole('button', { name: 'Save' }).click();
   await page.goto('/ledger');
@@ -153,12 +153,12 @@ test('a tip only reaches the people in the split, and cannot exceed the amount',
   await setPayer(page, 'Marc');
   await page.getByRole('button', { name: 'Tobias', exact: true }).nth(1).click();  // out of the split
   await page.getByRole('button', { name: 'Marc', exact: true }).nth(1).click();
-  await page.getByLabel('Tip per person', { exact: true }).fill('5');
+  await page.getByLabel('Tip', { exact: true }).fill('15');
   // Three people: €15 tip, €105 base, €35 + €5 each.
-  await expect(page.getByText('€15.00 of the amount is tip, split before the rest.')).toBeVisible();
+  await expect(page.getByText('€15.00 of it is tip, split equally before the rest. Entry total €120.00.')).toBeVisible();
   await expect(page.getByText('€40.00 per person')).toBeVisible();
 
-  await page.getByLabel('Tip per person', { exact: true }).fill('45');
+  await page.getByLabel('Tip', { exact: true }).fill('135');
   await expect(page.getByText('The tip is larger than the amount')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
 });
@@ -195,18 +195,38 @@ test('a tip survives reopening, so an edit cannot silently redistribute it (FR-3
   await page.getByLabel('Amount').first().fill('120');
   await page.getByLabel('Description').first().fill('Weinstube');
   await setPayer(page, 'Marc');
-  await page.getByLabel('Tip per person', { exact: true }).fill('4');
+  await page.getByLabel('Tip', { exact: true }).fill('20');
   await page.getByRole('button', { name: 'Save' }).click();
 
   await page.goto('/ledger');
   await page.getByText('Weinstube').first().click();
   await page.getByRole('button', { name: 'Edit entry' }).click();
-  await expect(page.getByLabel('Tip per person', { exact: true })).toHaveValue('4.00');   // the UI is en-US here, so a decimal point
+  // Reopens as the table's total, and as "included": what is stored is always a
+  // total that already contains the tip, whichever way it was typed.
+  await expect(page.getByLabel('Tip', { exact: true })).toHaveValue('20.00');   // the UI is en-US here, so a decimal point
   await expect(page.getByText('€24.00 per person')).toBeVisible();
   // Saving again with nothing changed must produce the very same shares.
   await page.getByRole('button', { name: 'Save' }).click();
   await page.goto('/ledger');
   await page.getByText('Weinstube').first().click();
+  expect(await page.getByText(/^€24\.00$/).count()).toBe(5);
+  await expectBalancesSumToZero(page);
+});
+
+test('a tip added on top raises the entry total rather than eating into the bill (FR-3.7)', async ({ page }) => {
+  await page.goto('/entry/new');
+  await page.getByLabel('Amount').first().fill('100');
+  await page.getByLabel('Description').first().fill('Pizzeria');
+  await setPayer(page, 'Marc');
+  await page.getByLabel('Tip', { exact: true }).fill('20');
+  await page.getByRole('button', { name: 'On top', exact: true }).click();
+  // The bill was €100 and the tip is extra, so the entry is €120 — the same five
+  // shares of €24 as the inclusive case, reached from what the receipt says.
+  await expect(page.getByText('€20.00 of it is tip, split equally before the rest. Entry total €120.00.')).toBeVisible();
+  await expect(page.getByText('€24.00 per person')).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await page.getByText('Pizzeria').first().click();
   expect(await page.getByText(/^€24\.00$/).count()).toBe(5);
   await expectBalancesSumToZero(page);
 });

@@ -45,8 +45,6 @@
     "descriptionPlaceholder": "e.g. Groceries, Fuel, Dinner",
     "paidBy": "Paid by",
     "splitAmong": "Split among",
-    "tipPerPerson": "Tip per person",
-    "tipTotal": "{{amount}} of the amount is tip, split before the rest.",
     "split": {
       "equal": "Equal",
       "exact": "Exact amounts",
@@ -115,7 +113,11 @@
     "markSharePaid": "Mark my share paid",
     "markPaidFor": "Mark paid for {{name}}",
     "sharePaid": "paid",
-    "sharePaymentDesc": "Share of {{description}}"
+    "sharePaymentDesc": "Share of {{description}}",
+    "tip": "Tip",
+    "tipIncluded": "Included in the amount",
+    "tipOnTop": "On top",
+    "tipNote": "{{tip}} of it is tip, split equally before the rest. Entry total {{total}}."
   },
   "ledger": {
     "empty": "Nothing recorded yet.",
