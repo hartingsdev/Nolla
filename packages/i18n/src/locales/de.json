@@ -82,7 +82,8 @@
       "weights": "Mindestens eine Person braucht einen Anteil",
       "percent": "Die Prozentwerte müssen zusammen 100 % ergeben",
       "tip": "Das Trinkgeld ist größer als der Betrag",
-      "reason": "Bitte den Grund für die Umbuchung angeben"
+      "reason": "Bitte den Grund für die Umbuchung angeben",
+      "person": "Person wählen"
     },
     "newPayment": "Neue Zahlung",
     "from": "Von",
@@ -172,7 +173,8 @@
     "formerly": "Vorher",
     "count_one": "{{count}} Teilnehmer",
     "count_other": "{{count}} Teilnehmer",
-    "none": "Noch niemand — füge die Leute hinzu, mit denen du teilst."
+    "none": "Noch niemand — füge die Leute hinzu, mit denen du teilst.",
+    "nameRequired": "Namen eingeben"
   },
   "settings": {
     "title": "Einstellungen",
@@ -187,7 +189,8 @@
     "ok": "OK",
     "yes": "Ja",
     "no": "Nein",
-    "back": "Zurück"
+    "back": "Zurück",
+    "requiredLegend": "* Pflichtfeld"
   },
   "trip": {
     "name": "Reisename",
@@ -242,7 +245,9 @@
     "empty": "Noch keine geteilten Reisen.",
     "open": "Öffnen",
     "noLocal": "Noch keine Reisen auf diesem Gerät.",
-    "newLocal": "Neue Reise auf diesem Gerät"
+    "newLocal": "Neue Reise auf diesem Gerät",
+    "nameRequired": "Namen für die Reise eingeben",
+    "inviteRequired": "Einladungslink einfügen"
   },
   "auth": {
     "signIn": "Anmelden",

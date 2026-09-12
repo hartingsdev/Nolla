@@ -33,9 +33,18 @@ export function H1({ children, style }: { children: ReactNode; style?: TextStyle
   const t = useTheme();
   return <Text style={[{ fontSize: 28, fontWeight: '700', color: t.text }, style]}>{children}</Text>;
 }
-export function H2({ children }: { children: ReactNode }) {
+/**
+ * The micro-label above a field. `required` marks the field before anyone
+ * presses save, so the form is honest about what it needs rather than only
+ * about what went wrong (NFR-16).
+ */
+export function H2({ children, required }: { children: ReactNode; required?: boolean }) {
   const t = useTheme();
-  return <Text style={{ fontSize: 13, fontWeight: '600', color: t.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>{children}</Text>;
+  return (
+    <Text style={{ fontSize: 13, fontWeight: '600', color: t.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+      {children}{required ? <Text style={{ color: t.negative }}>{' *'}</Text> : null}
+    </Text>
+  );
 }
 export function Body({ children, muted, style, numberOfLines, selectable }: { children: ReactNode; muted?: boolean; style?: TextStyle; numberOfLines?: number; selectable?: boolean }) {
   const t = useTheme();

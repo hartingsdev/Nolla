@@ -24,6 +24,8 @@ export default function Trips() {
   const [ccy, setCcy] = useState<string>('EUR');
   const [invite, setInvite] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /** NFR-16: each form marks what it needs, and complains only once asked to act. */
+  const [tried, setTried] = useState<'local' | 'create' | 'join' | null>(null);
 
   // Refresh the list of shared trips from the server (memberships may have changed elsewhere).
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function Trips() {
   const open = (id: string) => { setActiveTrip(id); router.replace('/'); };
   const create = async () => {
     setError(null);
+    setTried('create');
+    if (!name.trim()) return;
     const id = uuidv7();
     try {
       await api.createTrip({ id, name: name.trim(), baseCcy: ccy });
@@ -47,11 +51,13 @@ export default function Trips() {
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
   const join = () => {
+    setTried('join');
     const token = invite.trim().split('/i/')[1] ?? invite.trim();
     if (!token) return;
     router.push({ pathname: '/i/[token]', params: { token } });
   };
-  const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: th.border } as const;
+  const inputStyle = (bad: boolean) => ({ backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: bad ? th.negative : th.border }) as const;
+  const missing = (form: 'local' | 'create' | 'join', value: string) => tried === form && !value.trim();
   const remoteTrips = Object.values(trips).filter((x) => x.meta.remote);
   const localTrips = Object.values(trips).filter((x) => !x.meta.remote);
   const createLocalTrip = useStore((s) => s.createLocalTrip);
@@ -80,8 +86,15 @@ export default function Trips() {
             </Pressable>
           </View>
         ))}
-        <TextInput value={localName} onChangeText={setLocalName} placeholder={t('trips.name')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('trips.newLocal')} />
-        <Button label={t('trips.newLocal')} onPress={() => { const id = createLocalTrip(localName.trim()); setLocalName(''); open(id); }} disabled={!localName.trim()} />
+        <TextInput value={localName} onChangeText={setLocalName} placeholder={t('trips.name')} placeholderTextColor={th.muted} style={inputStyle(missing('local', localName))} accessibilityLabel={t('trips.newLocal')} />
+        {missing('local', localName) && <Body style={{ color: th.negative }}>{t('trips.nameRequired')}</Body>}
+        <Button label={t('trips.newLocal')} onPress={() => {
+          setTried('local');
+          if (!localName.trim()) return;
+          const id = createLocalTrip(localName.trim());
+          setLocalName('');
+          open(id);
+        }} />
       </Card>
 
       <Card>
@@ -112,15 +125,17 @@ export default function Trips() {
       {auth && (
         <>
           <Card>
-            <H2>{t('trips.create')}</H2>
-            <TextInput value={name} onChangeText={setName} placeholder={t('trips.name')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('trips.name')} />
+            <H2 required>{t('trips.create')}</H2>
+            <TextInput value={name} onChangeText={setName} placeholder={t('trips.name')} placeholderTextColor={th.muted} style={inputStyle(missing('create', name))} accessibilityLabel={t('trips.name')} />
+            {missing('create', name) && <Body style={{ color: th.negative }}>{t('trips.nameRequired')}</Body>}
             <Row>{CURRENCIES.map((c) => <Chip key={c} label={c} selected={ccy === c} onPress={() => { setCcy(c); }} />)}</Row>
-            <Button label={t('trips.create')} onPress={() => { void create(); }} disabled={!name.trim()} />
+            <Button label={t('trips.create')} onPress={() => { void create(); }} />
           </Card>
           <Card>
-            <H2>{t('trips.join')}</H2>
-            <TextInput value={invite} onChangeText={setInvite} placeholder={t('trips.joinPlaceholder')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('trips.joinPlaceholder')} autoCapitalize="none" />
-            <Button kind="secondary" label={t('invite.join')} onPress={join} disabled={!invite.trim()} />
+            <H2 required>{t('trips.join')}</H2>
+            <TextInput value={invite} onChangeText={setInvite} placeholder={t('trips.joinPlaceholder')} placeholderTextColor={th.muted} style={inputStyle(missing('join', invite))} accessibilityLabel={t('trips.joinPlaceholder')} autoCapitalize="none" />
+            {missing('join', invite) && <Body style={{ color: th.negative }}>{t('trips.inviteRequired')}</Body>}
+            <Button kind="secondary" label={t('invite.join')} onPress={join} />
           </Card>
         </>
       )}

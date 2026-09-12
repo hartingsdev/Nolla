@@ -57,3 +57,15 @@ export async function addExpense(page: Page, opts: { amount: string; description
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page).toHaveURL(/\/$/);
 }
+
+/**
+ * NFR-16: a form that cannot be saved explains itself instead of refusing.
+ * Pressing save names the problem and leaves you on the form — the URL check is
+ * what tells a refusal apart from a message that was already on screen.
+ */
+export async function expectSaveRefused(page: Page, message: string | RegExp): Promise<void> {
+  const before = page.url();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(message).first()).toBeVisible();
+  expect(page.url()).toBe(before);
+}

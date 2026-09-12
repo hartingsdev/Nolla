@@ -20,6 +20,8 @@ export default function Participants() {
   const remove = useStore((s) => s.removeParticipant);
   const entries = useEntries();
   const [name, setName] = useState('');
+  /** NFR-16: the form says what it needs, and only complains once asked to save. */
+  const [tried, setTried] = useState(false);
   // Only the server knows whether I may rename other people; a local trip has no roles at all.
   const [serverAdmin, setServerAdmin] = useState(false);
   const remote = meta?.remote ?? false;
@@ -34,16 +36,24 @@ export default function Participants() {
   }, [api, tripId, remote]);
 
   const referenced = new Set(entries.flatMap((e) => [...e.payments.map((p) => p.participantId), ...e.shares.map((s) => s.participantId)]));
-  const submit = () => { const n = name.trim(); if (!n) return; add({ id: uuidv7(), name: n }, todayLocal()); setName(''); };
+  const nameMissing = !name.trim();
+  const submit = () => {
+    setTried(true);
+    if (nameMissing) return;
+    add({ id: uuidv7(), name: name.trim() }, todayLocal());
+    setName('');
+    setTried(false);
+  };
   return (
     <Screen>
       <Card>
-        <H2>{t('participants.add')}</H2>
+        <H2 required>{t('participants.add')}</H2>
         <Row>
           <TextInput value={name} onChangeText={setName} onSubmitEditing={submit} placeholder={t('participants.namePlaceholder')} placeholderTextColor={th.muted}
-            style={{ flex: 1, backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: th.border }} accessibilityLabel={t('participants.namePlaceholder')} />
-          <Button label={t('common.ok')} onPress={submit} disabled={!name.trim()} />
+            style={{ flex: 1, backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 16, borderWidth: 1, borderColor: tried && nameMissing ? th.negative : th.border }} accessibilityLabel={t('participants.namePlaceholder')} />
+          <Button label={t('common.ok')} onPress={submit} />
         </Row>
+        {tried && nameMissing && <Body style={{ color: th.negative }}>{t('participants.nameRequired')}</Body>}
       </Card>
       <Card>
         {participants.map((p, i) => (

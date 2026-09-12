@@ -15,6 +15,14 @@ import { CATEGORIES, CATEGORY_ICON } from '../categories';
 type Kind = 'expense' | 'transfer' | 'adjustment';
 /** How the amount is divided (FR-3.1–3.5). The rule is applied at save time, not stored. */
 type Mode = 'equal' | 'weights' | 'percent' | 'exact';
+/** The parts of the form a problem can be pinned to (NFR-16). */
+type Field = 'amount' | 'description' | 'reason' | 'date' | 'person' | 'to' | 'payers' | 'among' | 'split' | 'tip';
+/**
+ * Something that stops the entry from being saved. `inline` marks the ones the
+ * form already shows where they happen (a residual, a tip bigger than the
+ * bill), so they are not repeated under the field.
+ */
+interface Problem { readonly fields: readonly Field[]; readonly message: string; readonly inline?: boolean }
 
 interface Props {
   readonly initial?: Entry;
@@ -94,6 +102,8 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const [from, setFrom] = useState<string | null>(initial && initial.type !== 'expense' ? initial.payments[0]?.participantId ?? null : meId);
   const [to, setTo] = useState<string | null>(initial && initial.type !== 'expense' ? initial.shares[0]?.participantId ?? null : null);
   const [error, setError] = useState<string | null>(null);
+  /** Nothing is marked red before the first save attempt (NFR-16). */
+  const [tried, setTried] = useState(false);
 
   const typed: Money | null = (() => {
     const n = normalizeAmountInput(amountRaw);
@@ -122,7 +132,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
   const amount: Money | null = typed === null ? null : (tipOnTop ? M.add(typed, tipTotal) : typed);
   // Only meaningful when the tip is said to be inside the amount.
   const tipTooBig = !tipOnTop && typed !== null && M.cmp(tipTotal, M.abs(typed)) > 0;
-  const shareResidual = amount && kind === 'expense' && mode === 'exact' ? exactResidual(amount, exactAmounts, surcharges) : null;
+  const shareResidual = amount && (kind === 'expense' || groupShape) && mode === 'exact' ? exactResidual(amount, exactAmounts, surcharges) : null;
   const multiPayer = payers.length > 1;
   const payerResidual = amount && kind === 'expense' && multiPayer
     ? M.sub(amount, M.sum(payers.map((id) => { const m = parse(payerAmounts[id]); return amount.minor < 0n ? M.neg(m) : m; }), ccy))
@@ -164,18 +174,56 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     setPayerAmounts((e) => ({ ...e, [id]: plain(M.add(parse(e[id]), M.abs(payerResidual))) }));
   };
 
+  /**
+   * Everything that stops this entry from being saved, in the order the form
+   * reads (NFR-16). Derived rather than raised at save time, so a field stops
+   * being red as it is fixed rather than at the next attempt.
+   */
+  const problems: Problem[] = (() => {
+    const out: Problem[] = [];
+    const add = (fields: Field[], key: string, inline = false) => { out.push({ fields, message: t(`entry.invalid.${key}`), inline }); };
+    if (!amount || M.isZero(amount)) add(['amount'], 'amount');
+    if (kind === 'expense' && !description.trim()) add(['description'], 'description');
+    if (kind === 'adjustment' && !reason.trim()) add(['reason'], 'reason');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) add(['date'], 'date');
+    if (groupShape) {
+      if (!from) add(['person'], 'person');
+    } else if (kind !== 'expense') {
+      if (!from || !to || from === to) add(['person', 'to'], 'transfer');
+    } else {
+      if (payers.length === 0) add(['payers'], 'payer');
+      if (payerResidual && !M.isZero(payerResidual)) add(['payers'], 'payers', true);
+    }
+    if (kind === 'expense' || groupShape) {
+      if (selected.length === 0) add(['among'], 'split');
+      if (tipTooBig) add(['tip'], 'tip', true);
+      if (mode === 'weights' && weightSum === 0n) add(['split'], 'weights', true);
+      if (mode === 'percent' && bpsResidual !== 0n) add(['split'], 'percent', true);
+      if (shareResidual && !M.isZero(shareResidual)) {
+        out.push({
+          fields: ['split'],
+          message: shareResidual.minor > 0n
+            ? t('entry.residual', { amount: formatMoney(shareResidual, locale) })
+            : t('entry.residualNegative', { amount: formatMoney(M.abs(shareResidual), locale) }),
+          inline: true,
+        });
+      }
+    }
+    return out;
+  })();
+
   const save = () => {
     setError(null);
-    if (!amount || M.isZero(amount)) { setError(t('entry.invalid.amount')); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setError(t('entry.invalid.date')); return; }
+    setTried(true);
+    if (problems.length > 0) return;
+    // `problems` has ruled all of these out already; the guards are what narrows the types.
+    if (!amount) return;
     const id = initial && !clone ? initial.id : uuidv7();
     const createdAt = initial && !clone ? initial.createdAt : new Date().toISOString();
     try {
       let entry: Entry;
       if (groupShape) {
-        if (!from) { setError(t('entry.invalid.payer')); return; }
-        if (!reason.trim()) { setError(t('entry.invalid.reason')); return; }
-        if (!rule || selected.length === 0) { setError(t('entry.invalid.split')); return; }
+        if (!from || !rule) return;
         const slice = allocate(amount, rule, { seed: id });
         // One side is the person, the other is the group. Which side is which decides
         // the direction: a payment is money in, a share is money out (§5, I1).
@@ -194,8 +242,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
               createdAt, deleted: false, reason: reason.trim(),
             };
       } else if (kind !== 'expense') {
-        if (!from || !to || from === to) { setError(t('entry.invalid.transfer')); return; }
-        if (kind === 'adjustment' && !reason.trim()) { setError(t('entry.invalid.reason')); return; }
+        if (!from || !to) return;
         entry = {
           id, type: kind, description: description.trim() || t(kind === 'adjustment' ? 'entry.adjustmentDefault' : 'entry.paymentDefault'), amount, date: localDate(date),
           payments: [{ participantId: from as ParticipantId, amount }],
@@ -204,17 +251,10 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
           ...(kind === 'adjustment' ? { reason: reason.trim() } : {}),
         };
       } else {
-        if (!description.trim()) { setError(t('entry.invalid.description')); return; }
-        if (payers.length === 0) { setError(t('entry.invalid.payer')); return; }
-        if (selected.length === 0) { setError(t('entry.invalid.split')); return; }
-        if (payerResidual && !M.isZero(payerResidual)) { setError(t('entry.invalid.payers')); return; }
+        if (!rule) return;
         const payments: Payment[] = multiPayer
           ? payers.map((pid) => { const m = parse(payerAmounts[pid]); return { participantId: pid as ParticipantId, amount: amount.minor < 0n ? M.neg(m) : m }; })
           : [{ participantId: payers[0] as ParticipantId, amount }];
-        if (mode === 'weights' && weightSum === 0n) { setError(t('entry.invalid.weights')); return; }
-        if (mode === 'percent' && bpsResidual !== 0n) { setError(t('entry.invalid.percent')); return; }
-        if (!rule) { setError(t('entry.invalid.split')); return; }
-        if (tipTooBig) { setError(t('entry.invalid.tip')); return; }
         entry = {
           id, type: 'expense', description: description.trim(), amount, date: localDate(date), payments,
           shares: allocate(amount, rule, { seed: id, surcharges: tipSurcharges(id) }),
@@ -230,17 +270,16 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
     }
   };
 
-  const inputStyle = { backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: th.border } as const;
-  const splitIncomplete = tipTooBig
-    || (shareResidual !== null && !M.isZero(shareResidual))
-    || (mode === 'weights' && weightSum === 0n)
-    || (mode === 'percent' && bpsResidual !== 0n);
-  const disabled = !amount
-    || (kind === 'expense' && (selected.length === 0 || splitIncomplete || (payerResidual !== null && !M.isZero(payerResidual))))
-    || (groupShape && (!from || selected.length === 0 || splitIncomplete))
-    || (kind === 'transfer' && (!from || !to || from === to))
-    || (kind === 'adjustment' && !adjGroup && (!from || !to || from === to))
-    || (kind === 'adjustment' && !reason.trim());
+  /** What the form admits to, once someone has tried to save it. */
+  const shown = tried ? problems : [];
+  const bad = (f: Field) => shown.some((p) => p.fields.includes(f));
+  /** The problem belonging to one field, unless the form already says it elsewhere. */
+  const fieldError = (f: Field) => {
+    const p = shown.find((x) => x.fields.includes(f) && !x.inline);
+    return p ? <Body style={{ color: th.negative }}>{p.message}</Body> : null;
+  };
+  const inputStyle = (f?: Field) => ({ backgroundColor: th.bg, color: th.text, borderRadius: 10, padding: 12, fontSize: 18, borderWidth: 1, borderColor: f && bad(f) ? th.negative : th.border }) as const;
+  const summary = shown[0]?.message ?? error;
 
   return (
     <Screen>
@@ -251,17 +290,19 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
       )}
 
       <Card>
-        <H2>{t('entry.amount')}</H2>
+        <H2 required>{t('entry.amount')}</H2>
         <TextInput value={amountRaw} onChangeText={setAmountRaw} keyboardType="decimal-pad" autoFocus={!initial} placeholder="0,00" placeholderTextColor={th.muted}
-          style={[inputStyle, { fontSize: 34, fontWeight: '700', textAlign: 'center' }]} accessibilityLabel={t('entry.amount')} />
+          style={[inputStyle('amount'), { fontSize: 34, fontWeight: '700', textAlign: 'center' }]} accessibilityLabel={t('entry.amount')} />
+        {fieldError('amount')}
         {kind === 'expense' && (
           <Row style={{ justifyContent: 'space-between' }}>
             <Body>{t('entry.refund')}</Body>
             <Switch value={refund} onValueChange={setRefund} />
           </Row>
         )}
-        <H2>{t('entry.description')}</H2>
-        <TextInput value={description} onChangeText={setDescription} placeholder={kind === 'expense' ? t('entry.descriptionPlaceholder') : t(kind === 'adjustment' ? 'entry.adjustmentDefault' : 'entry.paymentDefault')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.description')} />
+        <H2 required={kind === 'expense'}>{t('entry.description')}</H2>
+        <TextInput value={description} onChangeText={setDescription} placeholder={kind === 'expense' ? t('entry.descriptionPlaceholder') : t(kind === 'adjustment' ? 'entry.adjustmentDefault' : 'entry.paymentDefault')} placeholderTextColor={th.muted} style={inputStyle('description')} accessibilityLabel={t('entry.description')} />
+        {fieldError('description')}
         {kind === 'expense' && (
           <>
             <H2>{t('category.label')}</H2>
@@ -275,22 +316,25 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
               <Chip label={t('entry.adjPair')} selected={!adjGroup} onPress={() => { setAdjGroup(false); }} />
               <Chip label={t('entry.adjGroup')} selected={adjGroup} onPress={() => { setAdjGroup(true); }} />
             </Row>
-            <H2>{t('entry.reason')}</H2>
-            <TextInput value={reason} onChangeText={setReason} placeholder={t('entry.reasonPlaceholder')} placeholderTextColor={th.muted} style={inputStyle} accessibilityLabel={t('entry.reason')} />
+            <H2 required>{t('entry.reason')}</H2>
+            <TextInput value={reason} onChangeText={setReason} placeholder={t('entry.reasonPlaceholder')} placeholderTextColor={th.muted} style={inputStyle('reason')} accessibilityLabel={t('entry.reason')} />
+            {fieldError('reason')}
             <Body muted style={{ fontSize: 13 }}>{t('entry.reasonHint')}</Body>
           </>
         )}
-        <H2>{t('entry.date')}</H2>
+        <H2 required>{t('entry.date')}</H2>
         <Row>
-          <TextInput value={date} onChangeText={setDate} placeholder={t('entry.dateHint')} placeholderTextColor={th.muted} style={[inputStyle, { flex: 1 }]} accessibilityLabel={t('entry.date')} autoCapitalize="none" />
+          <TextInput value={date} onChangeText={setDate} placeholder={t('entry.dateHint')} placeholderTextColor={th.muted} style={[inputStyle('date'), { flex: 1 }]} accessibilityLabel={t('entry.date')} autoCapitalize="none" />
           <Chip label={t('entry.today')} selected={false} onPress={() => { setDate(todayLocal()); }} />
         </Row>
+        {fieldError('date')}
       </Card>
 
       {groupShape ? (
         <Card>
-          <H2>{t('entry.adjPerson')}</H2>
+          <H2 required>{t('entry.adjPerson')}</H2>
           <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={from === p.id} onPress={() => { setFrom(p.id); }} />)}</Row>
+          {fieldError('person')}
           <Row>
             <Chip label={t('entry.adjOwesGroup')} selected={owesGroup} onPress={() => { setOwesGroup(true); }} />
             <Chip label={t('entry.adjGroupOwes')} selected={!owesGroup} onPress={() => { setOwesGroup(false); }} />
@@ -301,10 +345,11 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         </Card>
       ) : kind !== 'expense' ? (
         <Card>
-          <H2>{t('entry.from')}</H2>
+          <H2 required>{t('entry.from')}</H2>
           <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={from === p.id} onPress={() => { setFrom(p.id); }} />)}</Row>
-          <H2>{t('entry.to')}</H2>
+          <H2 required>{t('entry.to')}</H2>
           <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={to === p.id} onPress={() => { setTo(p.id); }} disabled={from === p.id} />)}</Row>
+          {fieldError('to')}
         </Card>
       ) : null}
 
@@ -312,15 +357,16 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         <>
           {kind === 'expense' && (
           <Card>
-            <H2>{multiPayer ? t('entry.payers') : t('entry.paidBy')}</H2>
+            <H2 required>{multiPayer ? t('entry.payers') : t('entry.paidBy')}</H2>
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={payers.includes(p.id)} onPress={() => { togglePayer(p.id); }} />)}</Row>
+            {fieldError('payers')}
             {multiPayer && payers.map((pid) => {
               const p = participants.find((x) => x.id === pid);
               return (
                 <Row key={pid} style={{ justifyContent: 'space-between' }}>
                   <Body style={{ flex: 1 }}>{p?.name ?? '?'}</Body>
                   <TextInput value={payerAmounts[pid] ?? ''} onChangeText={(v) => { setPayerAmounts((e) => ({ ...e, [pid]: v })); }} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
-                    style={[inputStyle, { width: 120, textAlign: 'right' }]} accessibilityLabel={`${t('entry.paidBy')} ${p?.name ?? ''}`} />
+                    style={[inputStyle('payers'), { width: 120, textAlign: 'right' }]} accessibilityLabel={`${t('entry.paidBy')} ${p?.name ?? ''}`} />
                 </Row>
               );
             })}
@@ -334,14 +380,15 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
           )}
 
           <Card>
-            <H2>{groupShape ? t('entry.adjAmongGroup') : t('entry.splitAmong')}</H2>
+            <H2 required>{groupShape ? t('entry.adjAmongGroup') : t('entry.splitAmong')}</H2>
             <Row>{participants.map((p) => <Chip key={p.id} label={p.name} selected={among.has(p.id)} onPress={() => { toggleAmong(p.id); }} />)}</Row>
+            {fieldError('among')}
             {!refund && kind === 'expense' && (
               <>
                 <Row style={{ justifyContent: 'space-between' }}>
                   <Body style={{ flex: 1 }}>{t('entry.tip')}</Body>
                   <TextInput value={tipRaw} onChangeText={setTipRaw} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
-                    style={[inputStyle, { width: 120, textAlign: 'right' }]} accessibilityLabel={t('entry.tip')} />
+                    style={[inputStyle('tip'), { width: 120, textAlign: 'right' }]} accessibilityLabel={t('entry.tip')} />
                 </Row>
                 {!M.isZero(tipTotal) && (
                   <Row>
@@ -371,7 +418,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
                   value={mode === 'weights' ? weights[p.id] ?? '1' : percents[p.id] ?? ''}
                   onChangeText={(v) => { if (mode === 'weights') setWeights((e) => ({ ...e, [p.id]: v })); else setPercents((e) => ({ ...e, [p.id]: v })); }}
                   keyboardType={mode === 'weights' ? 'number-pad' : 'decimal-pad'} placeholder={mode === 'weights' ? '1' : '0'} placeholderTextColor={th.muted}
-                  style={[inputStyle, { width: 90, textAlign: 'right' }]} accessibilityLabel={p.name} />
+                  style={[inputStyle('split'), { width: 90, textAlign: 'right' }]} accessibilityLabel={p.name} />
               </Row>
             ))}
             {mode === 'weights' && weightSum === 0n && <Body style={{ color: th.negative }}>{t('entry.invalid.weights')}</Body>}
@@ -387,7 +434,7 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
               <Row key={p.id} style={{ justifyContent: 'space-between' }}>
                 <Body style={{ flex: 1 }}>{p.name}</Body>
                 <TextInput value={exact[p.id] ?? ''} onChangeText={(v) => { setExact((e) => ({ ...e, [p.id]: v })); }} keyboardType="decimal-pad" placeholder="0,00" placeholderTextColor={th.muted}
-                  style={[inputStyle, { width: 120, textAlign: 'right' }]} accessibilityLabel={p.name} />
+                  style={[inputStyle('split'), { width: 120, textAlign: 'right' }]} accessibilityLabel={p.name} />
               </Row>
             ))}
             {shareResidual && !M.isZero(shareResidual) && (
@@ -402,8 +449,10 @@ export function EntryForm({ initial, clone = false, allowed, onSave, onCancel }:
         </>
       )}
 
-      {error && <Body style={{ color: th.negative }}>{error}</Body>}
-      <Button label={t('entry.save')} onPress={save} disabled={disabled} />
+      <Body muted style={{ fontSize: 13 }}>{t('common.requiredLegend')}</Body>
+      {summary !== null && <Body style={{ color: th.negative }}>{summary}</Body>}
+      {/* Never disabled: a form that refuses without saying why is what NFR-16 is about. */}
+      <Button label={t('entry.save')} onPress={save} />
       <Button kind="secondary" label={t('entry.cancel')} onPress={onCancel} />
     </Screen>
   );

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addExpense, expectBalancesSumToZero, loadSample, setPayer } from './helpers';
+import { addExpense, expectBalancesSumToZero, expectSaveRefused, loadSample, setPayer } from './helpers';
 
 test.beforeEach(async ({ page }) => { await loadSample(page); });
 
@@ -29,8 +29,7 @@ test('exact split cannot be saved with a residual; "put the rest on" fixes it', 
   await page.getByLabel('Robert', { exact: true }).fill('32.45');
   await page.getByLabel('Tobias', { exact: true }).fill('36.12');
   await page.getByLabel('Marc', { exact: true }).fill('21.95');
-  await expect(page.getByText('€0.03 left to assign')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expectSaveRefused(page, '€0.03 left to assign');
   await page.getByRole('button', { name: 'Put the rest on Marc' }).click();
   await expect(page.getByText(/left to assign/)).toHaveCount(0);
   await page.getByRole('button', { name: 'Save' }).click();
@@ -62,8 +61,7 @@ test('two payers must add up to the total', async ({ page }) => {
   await page.getByLabel('Description').first().fill('Fuel');
   await page.getByRole('button', { name: 'Robert', exact: true }).first().click(); // adds Robert as second payer next to Yannik (me)
   await page.getByLabel('Paid by Yannik').fill('60');
-  await expect(page.getByText('€40.00 of the total still unassigned to a payer')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expectSaveRefused(page, '€40.00 of the total still unassigned to a payer');
   await page.getByRole('button', { name: 'Put the rest on Robert' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
   await page.goto('/ledger');
@@ -98,8 +96,7 @@ test('percent split seeds an even 100% and refuses to save while it does not add
   await expect(page.getByLabel('Yannik', { exact: true })).toHaveValue('20');
 
   await page.getByLabel('Yannik', { exact: true }).fill('40');
-  await expect(page.getByText('20% over 100%')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expectSaveRefused(page, '20% over 100%');
 
   await page.getByRole('button', { name: 'Put the rest on Robert' }).click();
   await expect(page.getByLabel('Robert', { exact: true })).toHaveValue('0');
@@ -159,8 +156,7 @@ test('a tip only reaches the people in the split, and cannot exceed the amount',
   await expect(page.getByText('€40.00 per person')).toBeVisible();
 
   await page.getByLabel('Tip', { exact: true }).fill('135');
-  await expect(page.getByText('The tip is larger than the amount')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expectSaveRefused(page, 'The tip is larger than the amount');
 });
 
 test('a share split reopens as shares and re-applies to a new total (FR-3.5)', async ({ page }) => {

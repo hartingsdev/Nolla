@@ -82,7 +82,8 @@
       "weights": "At least one person needs a share",
       "percent": "Percentages must add up to 100%",
       "tip": "The tip is larger than the amount",
-      "reason": "Say why this adjustment is needed"
+      "reason": "Say why this adjustment is needed",
+      "person": "Pick a person"
     },
     "newPayment": "New payment",
     "from": "From",
@@ -172,7 +173,8 @@
     "formerly": "Formerly",
     "count_one": "{{count}} participant",
     "count_other": "{{count}} participants",
-    "none": "Nobody yet — add the people you are splitting with."
+    "none": "Nobody yet — add the people you are splitting with.",
+    "nameRequired": "Enter a name"
   },
   "settings": {
     "title": "Settings",
@@ -187,7 +189,8 @@
     "ok": "OK",
     "yes": "Yes",
     "no": "No",
-    "back": "Back"
+    "back": "Back",
+    "requiredLegend": "* required"
   },
   "trip": {
     "name": "Trip name",
@@ -242,7 +245,9 @@
     "empty": "No shared trips yet.",
     "open": "Open",
     "noLocal": "No trips on this device yet.",
-    "newLocal": "New trip on this device"
+    "newLocal": "New trip on this device",
+    "nameRequired": "Enter a name for the trip",
+    "inviteRequired": "Paste an invite link"
   },
   "auth": {
     "signIn": "Sign in",

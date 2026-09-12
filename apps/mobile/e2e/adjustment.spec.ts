@@ -1,5 +1,5 @@
 import { type Page, expect, test } from '@playwright/test';
-import { cents, expectBalancesSumToZero, loadSample } from './helpers';
+import { cents, expectBalancesSumToZero, expectSaveRefused, loadSample } from './helpers';
 
 test.beforeEach(async ({ page }) => { await loadSample(page); });
 
@@ -20,8 +20,8 @@ test('an adjustment moves money between two people and keeps a reason (FR-6.1)',
   await page.getByRole('button', { name: 'Adjustment', exact: true }).click();
   await page.getByLabel('Amount').first().fill('25');
   await page.getByLabel('Reason', { exact: true }).fill('Robert paid Max in cash before the trip');
-  // Save stays out of reach until both sides are named.
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  // Neither side is named yet, so saving says so rather than sitting there disabled (NFR-16).
+  await expectSaveRefused(page, 'Pick two different people');
   await page.getByRole('button', { name: 'Robert', exact: true }).first().click();   // from
   await page.getByRole('button', { name: 'Max', exact: true }).nth(1).click();       // to
   await page.getByRole('button', { name: 'Save' }).click();
@@ -56,9 +56,13 @@ test('an adjustment without a reason cannot be saved (FR-6.1)', async ({ page })
   await page.getByLabel('Amount').first().fill('10');
   await page.getByRole('button', { name: 'Robert', exact: true }).first().click();
   await page.getByRole('button', { name: 'Max', exact: true }).nth(1).click();
-  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expectSaveRefused(page, 'Say why this adjustment is needed');
+  // The complaint is derived, not latched: typing the reason clears it.
   await page.getByLabel('Reason', { exact: true }).fill('Split a taxi we forgot to log');
-  await expect(page.getByRole('button', { name: 'Save' })).toBeEnabled();
+  await expect(page.getByText('Say why this adjustment is needed')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.goto('/ledger');
+  await expect(page.getByText(/Reason: Split a taxi we forgot to log/)).toBeVisible();
 });
 
 test('an adjustment between one person and the group (FR-6.1)', async ({ page }) => {
