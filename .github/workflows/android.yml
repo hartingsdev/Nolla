@@ -24,7 +24,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17            # React Native 0.86 builds on JDK 17
@@ -37,7 +37,7 @@ jobs:
       - name: Generate the native Android project
         run: pnpm --filter @vst/mobile exec expo prebuild --platform android --no-install
 
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@v6
 
       # assembleRelease bundles the JS, so EXPO_PUBLIC_API_URL is inlined here.
       # Expo's template signs release builds with the shared debug keystore — good
