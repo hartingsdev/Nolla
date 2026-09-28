@@ -17,11 +17,11 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.13.3",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "eslint-plugin-i18next": "^6.1.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "^5.9.0",
-    "typescript-eslint": "^8.46.0"
+    "typescript-eslint": "^8.70.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

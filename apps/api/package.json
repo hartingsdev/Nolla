@@ -29,9 +29,9 @@
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
-    "vitest": "^5.0.0",
+    "vitest": "^5.0.2",
     "esbuild": "^0.28.2",
-    "tsx": "^4.20.0",
+    "tsx": "^4.23.15",
     "@electric-sql/pglite": "^0.5.8"
   }
 }
