@@ -24,7 +24,7 @@
     "@vst/persistence": "workspace:*",
     "hono": "^4.13.7",
     "jose": "^6.2.12",
-    "nodemailer": "^10.0.1",
+    "nodemailer": "^10.0.9",
     "zod": "^4.5.4"
   },
   "devDependencies": {
