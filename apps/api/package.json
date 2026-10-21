@@ -22,7 +22,7 @@
     "@vst/contracts": "workspace:*",
     "@vst/domain": "workspace:*",
     "@vst/persistence": "workspace:*",
-    "hono": "^4.13.7",
+    "hono": "^4.13.11",
     "jose": "^6.2.12",
     "nodemailer": "^10.0.1",
     "zod": "^4.5.4"
